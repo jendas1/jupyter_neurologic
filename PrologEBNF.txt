@@ -1,0 +1,29 @@
+klBuchstabe = "a"|"b"|"c"|...|"z" (ä,ö,ü,ß) 
+grBuchstabe = "A"|"B"|"C"|...|"Z" (Ä,Ö,Ü) 
+Ziffer = "1"|"2"|...|"9"|"0" 
+Sonderz = "_"|" "|"~" 
+eZeichen = klBuchstabe | grBuchstabe | Sonderz | Ziffer 
+Zahl = ["+"|"-"], Ziffer, {Ziffer} 
+Konst = (klBuchtabe, {eZeichen}) | Zahl 
+Objekt = (grBuchstabe, {eZeichen}) | "_" 
+^PInh 
+SymbAusdruck = PInh, {{" "}, {("+"|"-"|"*"|"/"), {" "}, PInh} } 
+MathAusdruck = SymbAusdruck, {" "}, ("="|" is "|"=<"|">="|"\="), {" "}, 
+SymbAusdruck 
+Liste = "[", (PInh, {",", PInh},) | (PInh, "|", PInh) "]" 
+^Präd 
+DBOperation = ("asserta" | "assertz" | "retractall" | "retractone"), {" 
+"}, 
+  "(", Präd, ")" 
+PInh = {" "}, (Liste | SymbAusdruck | Konst | Objekt), {" "} 
+gePrfd = Konst 
+ePräd = Konst, {" "}, "(", PInh, {",", Pinh}, ")" 
+StandartAnweisung = "fail" | "!" | "true" 
+Anweisung = {" "}, (MathAusdruck | ePräd | DBOperation | StandartAnweisung), 
+{" "} 
+Anweisungsfolge = ( "(", {" "}, Anweisungsfolge, {" "}, ")" ) | 
+     ( Anweisung, {" "}, {","|";", {" "}, Anweisung, {" "}} ) 
+Regel = Konst, {" "},"(", PInh, {",", Pinh,}, ")", {" "}, 
+  ":-", {" "}, Anweisungsfolge 
+Präd = (gePrfdr | ePräd | Regel), {" "}, "." 
+Quelltext = {{" "}, Präd, {" "}} 
