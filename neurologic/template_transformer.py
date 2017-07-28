@@ -3,7 +3,8 @@ import logging
 from lark import Lark, Transformer, Tree
 from lark.lexer import Token
 import os
-neurologic_grammar = open(os.path.join(os.path.dirname(__file__),"neurologic_grammar.g"), 'r').read()
+
+neurologic_grammar = open(os.path.join(os.path.dirname(__file__), "neurologic_grammar.g"), 'r').read()
 neurologic_parser = Lark(neurologic_grammar, start='rule_file')
 
 logger = logging.getLogger(__name__)
@@ -103,7 +104,7 @@ class LambdaKappaTransformer(Transformer):
         head = rule.children[0]
         head_predicate = next(head.scan_values(lambda x: type(x) == Token and x.type == "PREDICATE"))
         self.rule_variants.setdefault(head_predicate, 0)
-        new_name = head_predicate.value + "_V" + str(self.rule_variants[head_predicate])
+        new_name = "__Var" + str(self.rule_variants[head_predicate]) + "_" + head_predicate.value
         self.rule_variants[head_predicate] += 1
         renamed_head = TokenRenamer("PREDICATE", head_predicate.value, new_name).transform(head)
         tail = rule.children[1:]
@@ -129,10 +130,31 @@ class LambdaKappaTransformer(Transformer):
         return Tree('rule_file', output)
 
 
+class LambdaKappaJoiner:
+    @staticmethod
+    def transform(root):
+        rule_variants = {}
+        for line in root.children[:]:
+            child = line.children[0]
+            if child.data == "rule" and child.children[0].children[0].children[0].value.startswith("__Var"):
+                rule_variants[child.children[0]] = child.children[1:]
+                root.children.remove(line)
+        for rule_variant, rule_body in rule_variants.items():
+            for line in root.children:
+                child = line.children[0]
+                if child.data == "weighted_rule":
+                    rule = child.children[0].children[1]
+                    body = rule.children[1]
+                    if body == rule_variant:
+                        rule.children = [rule.children[0], *rule_body]
+        return root
+
+
 class FixZeroArity(Transformer):
     def _get_func(self, name):
         if name in ["predicate_metadata", "predicate_offset"]:
-            return lambda children: Tree(name, [children[0], Token("INT", str(max(int(children[1].value), 1))), children[2]])
+            return lambda children: Tree(name,
+                                         [children[0], Token("INT", str(max(int(children[1].value), 1))), children[2]])
         else:
             return super()._get_func(name)
 
@@ -182,7 +204,7 @@ class FixedOffsetTransformer:
 
 class ToCodeTransformer(Transformer):
     def _get_func(self, name):
-        if name in ["atomic_formula", "initial_weight", "meaningful_line", "term", "metadata_value", "special_formula"]:
+        if name in ["atomic_formula", "initial_weight", "meaningful_line", "term", "metadata_value", "special_formula", "weighted_rule"]:
             return lambda x: x[0]
         elif name in ["weighted_rule_without_metadata", "weighted_fact"]:
             return lambda x: x[0] + " " + x[1]
@@ -237,6 +259,15 @@ def transform(text):
     fixed_offset = FixedOffsetTransformer().transform(reduced_final_kappa)
     lambda_kappa = LambdaKappaTransformer().transform(fixed_offset)
     transformed_code = ToCodeTransformer().transform(lambda_kappa)
+    logger.debug(f"Transformed code: {transformed_code}")
+    return transformed_code
+
+
+def transform_result(text):
+    tree = neurologic_parser.parse(text)
+    logger.debug(f"Transforming code: {text}")
+    joined_kappa_lambda = LambdaKappaJoiner.transform(tree)
+    transformed_code = ToCodeTransformer().transform(joined_kappa_lambda)
     logger.debug(f"Transformed code: {transformed_code}")
     return transformed_code
 

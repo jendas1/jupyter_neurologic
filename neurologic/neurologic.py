@@ -11,7 +11,7 @@ import pandas as pd
 
 from neurologic.common import parse, extract_parameters
 from neurologic.examples_unfolder import unfold_examplesf
-from neurologic.template_transformer import transform
+from neurologic.template_transformer import transform, transform_result
 
 NEUROLOGIC_JAR_PATH = os.path.join(os.path.dirname(__file__), "neurologic.jar")
 RAW_RULES_PATH = "./.rules_raw.pl"
@@ -107,4 +107,4 @@ def plot_statistics(output_folder):
 
 def learned_template(output_folder):
     # TODO : Pick best fold
-    return open(os.path.join(output_folder, "learned-fold0.txt"), "r").read()
+    return transform_result(open(os.path.join(output_folder, "learned-fold0.txt"), "r").read())
