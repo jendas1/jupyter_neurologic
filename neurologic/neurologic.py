@@ -105,6 +105,26 @@ def plot_statistics(output_folder):
     return dmap
 
 
+def display_neural_net(output_folder, example_index):
+    image_file = os.path.join(output_folder, "images", f"network β #{example_index} post learning.png")
+    dot_file = os.path.join(output_folder, "images", f"network β #{example_index} post learning.dot")
+    if not os.path.exists(image_file):
+        output = subprocess.run(["dot", "-Tpng", dot_file, "-o", image_file])
+        print(output.stderr)
+        print(output.stdout)
+        print(image_file)
+    return hv.RGB.load_image(image_file)
+
+
+def display_neural_nets(output_folder):
+    examples = range(len(list(glob(os.path.join(output_folder, "images", "network β #* post learning.png")))))
+    dimensions = [hv.Dimension("Example", values=examples)]
+    return hv.DynamicMap(
+        lambda index: display_neural_net(output_folder, index),
+        kdims=dimensions
+    )
+
+
 def learned_template(output_folder):
     # TODO : Pick best fold
     return transform_result(open(os.path.join(output_folder, "learned-fold0.txt"), "r").read())
