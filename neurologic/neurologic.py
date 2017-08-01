@@ -8,11 +8,15 @@ from os.path import dirname
 
 import holoviews as hv
 import pandas as pd
+from IPython.core.display import display_svg
+from ipywidgets import interact
+import ipywidgets as widgets
 
 from neurologic.common import parse, extract_parameters
 from neurologic.examples_unfolder import unfold_examplesf
 from neurologic import examples_transformer
 from neurologic import template_transformer
+
 NEUROLOGIC_JAR_PATH = os.path.join(os.path.dirname(__file__), "neurologic.jar")
 RAW_RULES_PATH = "./.rules_raw.pl"
 RAW_EXAMPLES_PATH = "./.examples_raw.pl"
@@ -56,8 +60,8 @@ def run(rules_path, training_set_path, **kwargs):
     parameters = kwargs
     with open(RAW_RULES_PATH, "w") as f:
         f.write(template_transformer.transform(open(rules_path, "r").read()))
-    with open(RAW_EXAMPLES_PATH,"w") as f:
-        f.write(examples_transformer.transform(open(training_set_path,"r").read()))
+    with open(RAW_EXAMPLES_PATH, "w") as f:
+        f.write(examples_transformer.transform(open(training_set_path, "r").read()))
     parameters["examples"] = RAW_EXAMPLES_PATH
     parameters["rules"] = RAW_RULES_PATH
     execute_jar(NEUROLOGIC_JAR_PATH, kwargs_to_cli(**parameters))
@@ -106,24 +110,42 @@ def plot_statistics(output_folder):
     return dmap
 
 
-def display_neural_net(output_folder, example_index):
+def _display_neural_net_holoviews(output_folder, example_index):
     image_file = os.path.join(output_folder, "images", f"network β #{example_index} post learning.png")
     dot_file = os.path.join(output_folder, "images", f"network β #{example_index} post learning.dot")
-    if not os.path.exists(image_file):
-        output = subprocess.run(["dot", "-Tpng", dot_file, "-o", image_file])
-        print(output.stderr)
-        print(output.stdout)
-        print(image_file)
+    if not os.path.exists(image_file) or True:
+        subprocess.run(["dot", "-Tpng","-Gdpi=300", dot_file, "-o", image_file])
     return hv.RGB.load_image(image_file)
 
 
-def display_neural_nets(output_folder):
-    examples = range(len(list(glob(os.path.join(output_folder, "images", "network β #* post learning.png")))))
+def _display_neural_net_svg(output_folder, example_index):
+    image_file = os.path.join(output_folder, "images", f"network β #{example_index} post learning.svg")
+    dot_file = os.path.join(output_folder, "images", f"network β #{example_index} post learning.dot")
+    if not os.path.exists(image_file) or True:
+        subprocess.run(["dot", "-Tsvg", dot_file, "-o", image_file])
+    # Workaround for normal size
+    svg_data = open(image_file, "r").read()
+    svg_data = re.sub('<svg width="[0-9]+pt" height="[0-9]+pt','<svg width="100%" height="100%"',svg_data)
+    return display_svg(svg_data, raw=True)
+
+
+def _display_neural_nets_holoviews(output_folder):
+    examples = range(len(list(glob(os.path.join(output_folder, "images", "network β #* post learning.dot")))))
     dimensions = [hv.Dimension("Example", values=examples)]
     return hv.DynamicMap(
-        lambda index: display_neural_net(output_folder, index),
+        lambda index: _display_neural_net_holoviews(output_folder, index),
         kdims=dimensions
     )
+
+
+def _display_neural_nets_ipywidgets(output_folder):
+    examples_count = len(list(glob(os.path.join(output_folder, "images", "network β #* post learning.dot"))))
+    return interact(lambda example_number: _display_neural_net_svg(output_folder, example_number),
+                    example_number=widgets.IntSlider(value=0,min=0,max=examples_count-1,step=1))
+
+
+def display_neural_nets(output_folder):
+    return _display_neural_nets_ipywidgets(output_folder)
 
 
 def learned_template(output_folder):
