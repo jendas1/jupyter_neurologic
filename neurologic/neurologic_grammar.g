@@ -35,6 +35,8 @@ fact: atomic_formula _DOT
 
 weighted_fact: weight fact
 
+weighted_conjunction: weight atomic_formula (_COMMA atomic_formula)* _DOT
+
 weight: _LANGLE SIGNED_NUMBER _RANGLE -> fixed_weight
      | SIGNED_NUMBER -> initial_weight
 

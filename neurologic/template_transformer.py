@@ -4,6 +4,8 @@ from lark import Lark, Transformer, Tree
 from lark.lexer import Token
 import os
 
+from neurologic.config import FINAL_PREFIX
+
 neurologic_grammar = open(os.path.join(os.path.dirname(__file__), "neurologic_grammar.g"), 'r').read()
 neurologic_parser = Lark(neurologic_grammar, start='rule_file')
 
@@ -173,7 +175,7 @@ class ReduceFinalKappa:
         output = root.children
         for name, arity in list_all_predicates(root):
             terms = ",".join(["__X" + str(i) for i in range(arity)])
-            rule = f"<1.0> finalKappa(a) :- {name}({terms}),final{name}({terms}). [identity]"
+            rule = f"<1.0> finalKappa(a) :- {name}({terms}),{FINAL_PREFIX}{name}({terms}). [identity]"
             output.append(neurologic_parser.parse(rule).children[0])
         rule = f"finalKappa/1 [identity]"
         output.append(neurologic_parser.parse(rule).children[0])
@@ -244,6 +246,10 @@ class ToCodeTransformer(Transformer):
     @staticmethod
     def fact(children):
         return children[0] + "."
+
+    @staticmethod
+    def weighted_conjunction(children):
+        return children[0] + " " + ",".join(children[1:]) + "."
 
     @staticmethod
     def rule_file(children):

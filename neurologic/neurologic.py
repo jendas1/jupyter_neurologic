@@ -11,8 +11,8 @@ import pandas as pd
 
 from neurologic.common import parse, extract_parameters
 from neurologic.examples_unfolder import unfold_examplesf
-from neurologic.template_transformer import transform, transform_result
-
+from neurologic import examples_transformer
+from neurologic import template_transformer
 NEUROLOGIC_JAR_PATH = os.path.join(os.path.dirname(__file__), "neurologic.jar")
 RAW_RULES_PATH = "./.rules_raw.pl"
 RAW_EXAMPLES_PATH = "./.examples_raw.pl"
@@ -55,8 +55,9 @@ def get_output_folder(parameters):
 def run(rules_path, training_set_path, **kwargs):
     parameters = kwargs
     with open(RAW_RULES_PATH, "w") as f:
-        f.write(transform(open(rules_path, "r").read()))
-    unfold_examplesf(training_set_path, RAW_EXAMPLES_PATH)
+        f.write(template_transformer.transform(open(rules_path, "r").read()))
+    with open(RAW_EXAMPLES_PATH,"w") as f:
+        f.write(examples_transformer.transform(open(training_set_path,"r").read()))
     parameters["examples"] = RAW_EXAMPLES_PATH
     parameters["rules"] = RAW_RULES_PATH
     execute_jar(NEUROLOGIC_JAR_PATH, kwargs_to_cli(**parameters))
@@ -127,4 +128,4 @@ def display_neural_nets(output_folder):
 
 def learned_template(output_folder):
     # TODO : Pick best fold
-    return transform_result(open(os.path.join(output_folder, "learned-fold0.txt"), "r").read())
+    return template_transformer.transform_result(open(os.path.join(output_folder, "learned-fold0.txt"), "r").read())
