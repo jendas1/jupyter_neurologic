@@ -1,4 +1,4 @@
-CONSTANT: LCASE_LETTER (LETTER | DIGIT)*
+CONSTANT: LCASE_LETTER (LETTER | DIGIT | "_" )*
          | SIGNED_NUMBER
 VARIABLE: (UCASE_LETTER | "_") (LETTER | DIGIT | "_")*
 ACTIVATION_FUNCTION:  LETTER (LETTER | DIGIT)*
@@ -25,8 +25,8 @@ member_term_list: _LPAREN VARIABLE _COMMA constant_list _RPAREN
 normal_atomic_formula: PREDICATE term_list
 member_formula:  MEMBER_PREDICATE member_term_list
 builtin_formula: INTERNAL_PREDICATE term_list | TRUE
-special_formula: member_formula | builtin_formula
-atomic_formula:  special_formula | normal_atomic_formula
+?special_formula: member_formula | builtin_formula
+?atomic_formula:  special_formula | normal_atomic_formula
 
 constant_list: _LBRACKET (CONSTANT (_COMMA CONSTANT)*)? _RBRACKET
 rule: atomic_formula _IMPLIED_BY atomic_formula (_COMMA atomic_formula)* _DOT
@@ -46,13 +46,13 @@ metadata: _LBRACKET (metadata_value (_COMMA metadata_value)*)? _RBRACKET
 
 weighted_rule_without_metadata: weight rule
 weighted_rule_with_metadata: weighted_rule_without_metadata metadata
-weighted_rule: weighted_rule_without_metadata
+?weighted_rule: weighted_rule_without_metadata
         | weighted_rule_with_metadata
 
 predicate_metadata: PREDICATE _SLASH INT metadata
 predicate_offset: PREDICATE _SLASH INT weight
 
-meaningful_line: weighted_rule | rule | weighted_fact | fact | predicate_metadata | predicate_offset
+?meaningful_line: weighted_rule | rule | weighted_fact | fact | predicate_metadata | predicate_offset | weighted_conjunction
 rule_file: meaningful_line+
 %import common.ESCAPED_STRING
 %import common.SIGNED_NUMBER

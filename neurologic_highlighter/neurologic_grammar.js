@@ -34,8 +34,8 @@ define({
         "comment:comment": {"interleave": true, "tokens": [["//", null], ["/*", "*/"]]}
         , "SIGNED_NUMBER": [
             // floats
-            "RE::/\\d*\\.\\d+(e[\\+\\-]?\\d+)?/",
-            "RE::/\\d+\\.\\d*/",
+            "RE::/-?\\d*\\.\\d+(e[\\+\\-]?\\d+)?/",
+            "RE::/-?\\d+\\.\\d*/",
             "RE::/\\.\\d+/",
             // integers
             // hex
@@ -45,14 +45,14 @@ define({
             // octal
             "RE::/0o[0-7]+L?/",
             // decimal
-            "RE::/[1-9]\\d*(e[\\+\\-]?\\d+)?L?/",
+            "RE::/-?[1-9]\\d*(e[\\+\\-]?\\d+)?L?/",
             // just zero
             "RE::/0(?![\\dx])/"
         ]
         , "INT": "RE::/[0-9]+/"
-        , "PREDICATE": "RE::/[a-zA-Z_][a-zA-Z0-9_]*/"
+        , "PREDICATE": "RE::/[a-zA-Z_][_a-zA-Z0-9]*/"
         , "VARIABLE": "RE::/[A-Z_][_a-zA-Z0-9]*/"
-        , "CONSTANT": ["RE::/[0-9]+/", "RE::/[a-z][a-zA-Z0-9]*/"]
+        , "CONSTANT": ["RE::/[0-9]+/", "RE::/[a-z][_a-zA-Z0-9]*/"]
         , "ACTIVATION_FUNCTION": "RE::/[a-zA-Z_][a-zA-Z0-9_]*/"
         , "INTERNAL_PREDICATE": "RE::/@[a-zA-Z0-9_]+/",
         "_IMPLIED_BY": ":-",

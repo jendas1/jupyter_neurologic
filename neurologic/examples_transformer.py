@@ -4,6 +4,8 @@ import os
 from lark import Lark, Transformer, Tree
 from lark.lexer import Token
 
+from neurologic.lark_utils import patch_tree
+from neurologic import lark_utils
 from neurologic.config import FINAL_PREFIX
 from neurologic.template_transformer import ToCodeTransformer, FixZeroArity
 
@@ -12,17 +14,17 @@ neurologic_parser = Lark(neurologic_grammar, start='rule_file')
 
 logger = logging.getLogger(__name__)
 
+patch_tree(lark_utils.named_children)
+
 
 class ExampleToOldVersion(Transformer):
     @staticmethod
     def weighted_rule_without_metadata(children):
         weight = children[0]
         rule = children[1]
-        head = rule.children[0]
-        atomic_formula = head.children[0]
-        predicate = atomic_formula.children[0]
-        atomic_formula.children[0] = Token('PREDICATE', FINAL_PREFIX + predicate.value)
-        return Tree('weighted_conjunction', [weight, *rule.children[1:], rule.children[0]])
+        head_formula = rule['head']
+        head_formula["PREDICATE"] = Token("PREDICATE", FINAL_PREFIX + head_formula["PREDICATE"].value)
+        return Tree('weighted_conjunction', [weight, *rule["body"], head_formula])
 
     @staticmethod
     def weighted_rule(children):

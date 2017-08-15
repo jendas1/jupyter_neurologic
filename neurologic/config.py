@@ -1,1 +1,2 @@
 FINAL_PREFIX = "__final"
+VARIANT_PREFIX = "__Var"
