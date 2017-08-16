@@ -1,0 +1,10 @@
+name: neurologic
+dependencies:
+  - python>=3.6
+  - holoviews
+  - pandas
+  - jupyter
+  - pip
+  - pip:
+    - lark-parser
+    - ipywidgets

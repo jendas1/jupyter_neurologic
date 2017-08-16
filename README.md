@@ -1,6 +1,7 @@
 # Prerequisites
 Python 3.6 or greater is required.
 # Install
+### Pip version
 ```bash
 # core
 pip3 install .
@@ -12,6 +13,24 @@ jupyter nbextension enable neurologic_highlighter/main
 # enable displaying neural nets
 jupyter nbextension enable --py widgetsnbextension
 ```
+### Conda version
+```bash
+# core
+conda env create --file environment.yml
+source activate neurologic
+
+# neurologic code highlighting
+jupyter nbextension install --sys-prefix neurologic_highlighter/
+jupyter nbextension enable --sys-prefix neurologic_highlighter/main
+
+# enable displaying neural nets
+jupyter nbextension enable --sys-prefix --py widgetsnbextension
+```
+### Vagrant version
+```bash
+vagrant up
+```
+Access jupyter notebook on port 9999.
 # Run
 ```
 jupyter notebook
