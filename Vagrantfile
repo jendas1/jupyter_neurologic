@@ -70,15 +70,14 @@ Vagrant.configure("2") do |config|
   # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
   # documentation for more information about their specific syntax and use.
   config.vm.network "forwarded_port", guest: 9999, host: 9999
-  config.vm.provision "shell", inline: <<-SHELL
-    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -q -O ~/miniconda.sh
-    bash ~/miniconda.sh -b -p $HOME/miniconda3
-    echo 'export PATH="$HOME/miniconda3/bin:$PATH"' >> ~/.bashrc
-    export PATH="$HOME/miniconda3/bin:$PATH"
+  config.vm.provision "shell", privileged: false, inline: <<-SHELL
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -q -O /home/vagrant/miniconda.sh
+    bash /home/vagrant/miniconda.sh -b -p /home/vagrant/miniconda3
+    echo 'export PATH="/home/vagrant/miniconda3/bin:$PATH"' >> ~/.bashrc
+    export PATH="/home/vagrant/miniconda3/bin:$PATH"
     # core
     cd /vagrant
-    conda env create --file environment.yml
-    chown -R vagrant:vagrant /home/vagrant/.local/share/jupyter
+    conda env create --force --file environment.yml
     source activate neurologic
     
     # neurologic code highlighting
@@ -88,10 +87,9 @@ Vagrant.configure("2") do |config|
     # enable displaying neural nets
     jupyter nbextension enable --sys-prefix --py widgetsnbextension
 
-    # fix root owning jupyter
   SHELL
   $jupyter_run = <<-SCRIPT
-    export PATH="$HOME/miniconda3/bin:$PATH"
+    export PATH="/home/vagrant/miniconda3/bin:$PATH"
     cd /vagrant
     source activate neurologic
     jupyter notebook --ip=0.0.0.0 --port=9999

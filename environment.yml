@@ -1,10 +1,17 @@
 name: neurologic
+channels:
+  - cyclus
 dependencies:
   - python>=3.6
   - holoviews
   - pandas
   - jupyter
   - pip
+  - java-jdk
+  - graphviz
   - pip:
     - lark-parser
     - ipywidgets
+    - bokeh
+    - pyparsing
+    - matplotlib

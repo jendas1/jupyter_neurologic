@@ -10,5 +10,5 @@ setup(
     author='Jan Studený',
     author_email='',
     description='',
-    requires=['holoviews', 'pandas', 'jupyter', 'lark-parser', 'ipywidgets']
+    requires=['holoviews', 'pandas', 'jupyter', 'lark-parser', 'ipywidgets', 'bokeh']
 )
