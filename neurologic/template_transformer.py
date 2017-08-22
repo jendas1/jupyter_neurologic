@@ -8,15 +8,13 @@ from lark.tree import Visitor
 
 import neurologic
 from neurologic import lark_utils
-from neurologic.config import FINAL_PREFIX, VARIANT_PREFIX
-from neurologic.lark_utils import TreeSubstituter, TokenRenamer, patch_tree
+from neurologic.config import FINAL_PREFIX, VARIANT_PREFIX, neurologic_parser
+from neurologic.lark_utils import TreeSubstituter, TokenRenamer
 
-neurologic_grammar = open(os.path.join(os.path.dirname(__file__), "neurologic_grammar.g"), 'r').read()
-neurologic_parser = Lark(neurologic_grammar, start='rule_file')
 
 logger = logging.getLogger(__name__)
 
-patch_tree(lark_utils.named_children)
+
 
 
 class RuleSpecializationTransformer(Transformer):

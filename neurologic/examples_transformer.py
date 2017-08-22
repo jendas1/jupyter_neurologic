@@ -1,16 +1,12 @@
 import logging
-import os
 
-from lark import Lark, Transformer, Tree
+from lark import Transformer, Tree
 from lark.lexer import Token
 
-from neurologic.lark_utils import patch_tree
 from neurologic import lark_utils
-from neurologic.config import FINAL_PREFIX
+from neurologic.config import FINAL_PREFIX, neurologic_parser
+from neurologic.lark_utils import patch_tree
 from neurologic.template_transformer import ToCodeTransformer, FixZeroArity
-
-neurologic_grammar = open(os.path.join(os.path.dirname(__file__), "neurologic_grammar.g"), 'r').read()
-neurologic_parser = Lark(neurologic_grammar, start='rule_file')
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +27,16 @@ class ExampleToOldVersion(Transformer):
         return children[0]
 
 
-def transform(text):
-    logger.debug(f"Transforming code: {text}")
-    tree = neurologic_parser.parse(text)
+def transform_from_tree(tree):
     fixed_zero_arity = FixZeroArity().transform(tree)
     old_version = ExampleToOldVersion().transform(fixed_zero_arity)
     transformed_code = ToCodeTransformer().transform(old_version)
+    return transformed_code
+
+
+def transform(text):
+    logger.debug(f"Transforming code: {text}")
+    tree = neurologic_parser.parse(text)
+    transformed_code = transform_from_tree(tree)
     logger.debug(f"Transformed code: {transformed_code}")
     return transformed_code

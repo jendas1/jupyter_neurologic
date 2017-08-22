@@ -4,6 +4,7 @@ import re
 import struct
 from collections import OrderedDict
 from glob import glob
+import pandas as pd
 
 
 def extract_parameters(filename):
@@ -30,6 +31,15 @@ def extract_all_parameters(base_path, base_name):
                 all_parameters.setdefault(key, {"values": set(), "type": "dataset" if not ind else "learning"})[
                     "values"].add(value)
     return all_parameters
+
+
+def weights_from_ser(base_path, fold, restart):
+    data_path = base_path + f"weightsHistory-fold{fold}-restart{restart}.ser"
+    headers = open(base_path + "weightNames.csv").read().split(",")
+    data = parse(open(data_path, 'rb'))
+    df = pd.DataFrame(data[0]['data'])
+    df.columns = headers
+    return df
 
 
 def parse(f):
