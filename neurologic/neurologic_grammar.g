@@ -2,7 +2,7 @@ CONSTANT: LCASE_LETTER (LETTER | DIGIT | "_" )*
          | SIGNED_NUMBER
 VARIABLE: (UCASE_LETTER | "_") (LETTER | DIGIT | "_")*
 ACTIVATION_FUNCTION:  LETTER (LETTER | DIGIT)*
-PREDICATE: (LETTER | "_") (LETTER | DIGIT | "_")*
+PREDICATE: /(?!member|_member)[a-zA-Z_][a-zA-Z0-9_]*/
 INTERNAL_PREDICATE: "@" (LETTER | DIGIT)*
 _IMPLIED_BY: ":-"
 _LANGLE: "<"
@@ -18,9 +18,9 @@ _SLASH: "/"
 _CARET: "^"
 TRUE: "true"
 
-term: CONSTANT | VARIABLE
+?term: CONSTANT | VARIABLE
 term_list: _LPAREN (term (_COMMA term)*)? _RPAREN
-member_term_list: _LPAREN VARIABLE _COMMA constant_list _RPAREN
+member_term_list: _LPAREN VARIABLE _COMMA (constant_list | VARIABLE) _RPAREN
 
 normal_atomic_formula: PREDICATE term_list
 member_formula:  MEMBER_PREDICATE member_term_list

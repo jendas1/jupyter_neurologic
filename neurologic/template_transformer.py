@@ -11,10 +11,7 @@ from neurologic import lark_utils
 from neurologic.config import FINAL_PREFIX, VARIANT_PREFIX, neurologic_parser
 from neurologic.lark_utils import TreeSubstituter, TokenRenamer
 
-
 logger = logging.getLogger(__name__)
-
-
 
 
 class RuleSpecializationTransformer(Transformer):
@@ -89,6 +86,36 @@ class DFSTransformer:
         return f(Tree(root.data, transformed_children))
 
     def default(self, root):
+        return root
+
+
+class AtomicFormulaEraser(Transformer):
+    def __init__(self, target):
+        self.target = target
+
+    def rule(self, children):
+        return Tree("rule", list(filter(lambda x: x != self.target, children)))
+
+
+class RangePredicateTransformer:
+    @staticmethod
+    def transform(root):
+        for ind, line in enumerate(root.children[:]):
+            range_preds = line.find_pred(
+                lambda root: root.data == "normal_atomic_formula" and root["PREDICATE"].value == "range")
+            for range_pred in range_preds:
+                variable = range_pred["term_list"][0]
+                start = range_pred["term_list"][1].value
+                end = range_pred["term_list"][2].value
+                try:
+                    substitution = Tree('constant_list',
+                                        [Token("CONSTANT", str(i)) for i in range(int(start), int(end) + 1)])
+                except ValueError:
+                    assert type(start) == str and type(end) == str
+                    substitution = Tree('constant_list',
+                                        [Token("CONSTANT", chr(i)) for i in range(ord(start), ord(end)+1)])
+                root.children[ind] = AtomicFormulaEraser(range_pred).transform(root.children[ind])
+                root.children[ind] = TreeSubstituter(variable, substitution).transform(root.children[ind])
         return root
 
 
@@ -259,7 +286,8 @@ class ToCodeTransformer(Transformer):
 def transform(text):
     logger.debug(f"Transforming code: {text}")
     tree = neurologic_parser.parse(text)
-    unfolded_specialization = RuleSpecializationTransformer().transform(tree)
+    range_transformed = RangePredicateTransformer().transform(tree)
+    unfolded_specialization = RuleSpecializationTransformer().transform(range_transformed)
     fixed_arity = FixZeroArity().transform(unfolded_specialization)
     reduced_final_kappa = ReduceFinalKappa().transform(fixed_arity)
     fixed_offset = FixedOffsetTransformer().transform(reduced_final_kappa)
