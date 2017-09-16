@@ -861,7 +861,7 @@ function get_blockmatcher( name, tokens, RegExpID, cachedRegexes, cachedMatchers
             {
                 if ( is_regex_pattern )
                 {
-                    t2 = String(tmp[i][1]);
+                    t2 = new String(tmp[i][1]);
                     t2.regex_pattern = RegExpID;
                 }
                 else
@@ -1542,7 +1542,7 @@ function parse_peg_bnf_notation( tok, Lex, Syntax )
         modifier = false, modifier_preset;
 
     modifier_preset = !!tok.modifier ? tok.modifier : null;
-    t = String( trim(tok) ); t.pos = 0;
+    t = new String( trim(tok) ); t.pos = 0;
 
     if ( 1 === t.length )
     {
@@ -1576,7 +1576,7 @@ function parse_peg_bnf_notation( tok, Lex, Syntax )
                                 prev_entry = get_backreference( prev_token, Lex, Syntax );
                                 // in case it is just string, wrap it, to maintain the modifier reference
                                 Syntax[ curr_token ] = T_STR & get_type( prev_entry )
-                                                    ? String( prev_entry )
+                                                    ? new String( prev_entry )
                                                     : clone( prev_entry );
                                 Syntax[ curr_token ].modifier = token;
                             }
@@ -1674,7 +1674,7 @@ function parse_peg_bnf_notation( tok, Lex, Syntax )
                     // end of character select, should be handled in previous case
                     // added here just for completeness
                     token += c;
-
+                    continue;
                 }
 
                 else if ( '/' === c )
@@ -1737,7 +1737,7 @@ function parse_peg_bnf_notation( tok, Lex, Syntax )
                             '}'
                         ].join('');
                         if ( !Syntax[ curr_token ] )
-                            Syntax[ curr_token ] = { type:'repeat', repeat:[repeat[0], repeat[1]], tokens:[prev_token] };
+                            Syntax[ curr_token ] = { type:'repeat', repeat:[repeat[0], repeat[1]], tokens:[prev_token] }
                         sequence[sequence.length-1] = curr_token;
                     }
                     else token += c;
@@ -1748,7 +1748,7 @@ function parse_peg_bnf_notation( tok, Lex, Syntax )
                     // literal repeat end modifier, should be handled in previous case
                     // added here just for completeness
                     token += c;
-
+                    continue;
                 }
 
                 else if ( ('&' === c) || ('!' === c) )
@@ -1861,7 +1861,7 @@ function parse_peg_bnf_notation( tok, Lex, Syntax )
                         // in case it is just string, wrap it, to maintain the modifier reference
                         prev_entry = get_backreference( prev_token, Lex, Syntax );
                         Syntax[ curr_token ] = T_STR & get_type( prev_entry )
-                                            ? String( prev_entry )
+                                            ? new String( prev_entry )
                                             : clone( prev_entry );
                         Syntax[ curr_token ].modifier = token;
                     }
@@ -3612,7 +3612,7 @@ function t_composite( t, stream, state, token )
     if ( T_SUBGRAMMAR === type )
     {
         self.status &= CLEAR_ERROR;
-        var subgrammar = String(tokens[0]), nextTokenizer = state.stack ? state.stack.val : null;
+        var subgrammar = new String(tokens[0]), nextTokenizer = state.stack ? state.stack.val : null;
         subgrammar.subgrammar = 1;
         subgrammar.next = nextTokenizer ? new tokenizer(T_POSITIVE_LOOKAHEAD, nextTokenizer.name, [nextTokenizer]) : null;
         subgrammar.required = nextTokenizer ? nextTokenizer.status & REQUIRED : 0;
@@ -3874,7 +3874,7 @@ function state_dispose( state )
 // a wrapper to manipulate a string as a stream, based on Codemirror's StringStream
 function Stream( line, start, pos )
 {
-    var self = String( line );
+    var self = new String( line );
     self.start = start || 0;
     self.pos = pos || 0;
 
