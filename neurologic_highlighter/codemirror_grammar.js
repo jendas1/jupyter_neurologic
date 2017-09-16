@@ -332,7 +332,7 @@ function extend(/* var args here.. */)
                 else if ( T_ARRAY === T && T_ARRAY === T2 )
                 {
                     a = o[k]; a2 = o2[k]; l = a2.length;
-                    if ( !l )
+                    if ( !l ) continue;
                     else if ( !a.length )
                     {
                         o[k] = a2.slice();

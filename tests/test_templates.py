@@ -1,8 +1,15 @@
-import logging
-
 from neurologic.template_transformer import transform
 
-input_text = r"""
+
+def test_special_predicate():
+    assert transform(range_input_text) == range_result
+
+
+def test_advanced_template_transform():
+    assert transform(advanced_input_text) == advanced_result
+
+
+advanced_input_text = r"""
 0.0 cardFromGroup(Group,Position) :- card(Position,Rank,Suit),
                                      range(GroupRange,2,2),
                                      member(Group,RankRange),
@@ -20,7 +27,8 @@ input_text = r"""
 <1.0> succ(4,5).
 score/0 [identity]
 """
-result = """\
+
+advanced_result = """\
 __Var0_cardFromGroup(2,Position) :- card(Position,2,hearts).
 0.0 cardFromGroup(2,Position) :- __Var0_cardFromGroup(2,Position).
 __Var0_cardFromGroup/2 [lukasiewicz]
@@ -73,11 +81,6 @@ __finalsucc/2 <0.0>
 __finalscore/1 <0.0>\
 """
 
-
-def test_template_transform():
-    assert transform(input_text) == result
-
-
 range_input_text = r"""
 0.0 winner(Group1,Group2) :- nice(jenda),range(Group1Range,1,3),_member(Group1,Group1Range)
                                         ,range(Group2Range,a,c),_member(Group2,Group2Range). [lukasiewicz,^Group1,^Group2]
@@ -85,6 +88,7 @@ range_input_text = r"""
 """
 
 range_result = """\
+__Var0_winner(1,a) :- nice(jenda).
 0.0 winner(1,a) :- __Var0_winner(1,a).
 __Var0_winner/2 [lukasiewicz]
 __Var1_winner(1,b) :- nice(jenda).
@@ -125,9 +129,5 @@ winner/2 <0.0>
 nice/1 <0.0>
 finalKappa/1 <0.0>
 __finalwinner/2 <0.0>
-__finalnice/1 <0.0>
+__finalnice/1 <0.0>\
 """
-
-
-def test_special_predicate():
-    assert transform(range_input_text) == range_result
