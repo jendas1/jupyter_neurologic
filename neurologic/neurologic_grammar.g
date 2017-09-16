@@ -29,11 +29,8 @@ builtin_formula: INTERNAL_PREDICATE term_list | TRUE
 ?atomic_formula:  special_formula | normal_atomic_formula
 
 constant_list: _LBRACKET (CONSTANT (_COMMA CONSTANT)*)? _RBRACKET
-rule: atomic_formula _IMPLIED_BY atomic_formula (_COMMA atomic_formula)* _DOT
 
-fact: atomic_formula _DOT
-
-weighted_fact: weight fact
+fact: weight? atomic_formula _DOT
 
 weighted_conjunction: weight atomic_formula (_COMMA atomic_formula)* _DOT
 
@@ -44,16 +41,16 @@ metadata_value: ACTIVATION_FUNCTION
         | _CARET VARIABLE -> specialization_variable
 metadata: _LBRACKET (metadata_value (_COMMA metadata_value)*)? _RBRACKET
 
-weighted_rule_without_metadata: weight rule
-weighted_rule_with_metadata: weighted_rule_without_metadata metadata
-?weighted_rule: weighted_rule_without_metadata
-        | weighted_rule_with_metadata
+rule: weight? atomic_formula _IMPLIED_BY atomic_formula (_COMMA atomic_formula)* _DOT metadata?
 
-predicate_metadata: PREDICATE _SLASH INT metadata
-predicate_offset: PREDICATE _SLASH INT weight
+predicate_metadata: (PREDICATE | INTERNAL_PREDICATE) _SLASH INT metadata
+predicate_offset: (PREDICATE | INTERNAL_PREDICATE) _SLASH INT weight
 
-?meaningful_line: weighted_rule | rule | weighted_fact | fact | predicate_metadata | predicate_offset | weighted_conjunction
-rule_file: meaningful_line+
+?rule_line: rule | fact | predicate_metadata | predicate_offset
+?example_line: rule
+?old_example_line: weighted_conjunction
+rule_file: rule_line+ | example_line+ | old_example_line+
+
 %import common.ESCAPED_STRING
 %import common.SIGNED_NUMBER
 %import common.INT

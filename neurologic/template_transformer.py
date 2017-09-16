@@ -1,30 +1,74 @@
 import logging
-import os
+from collections import OrderedDict
 from itertools import product
-import lark
-from lark import Lark, Transformer, Tree
+from orderedset import OrderedSet
+from lark import Transformer, Tree
 from lark.lexer import Token
-from lark.tree import Visitor
 
-import neurologic
-from neurologic import lark_utils
 from neurologic.config import FINAL_PREFIX, VARIANT_PREFIX, neurologic_parser
-from neurologic.lark_utils import TreeSubstituter, TokenRenamer
+from neurologic.lark_utils import TreeSubstituter, TokenRenamer, has_metadata, has_weight
 
 logger = logging.getLogger(__name__)
 
+grouped_name = {
+    "weighted_rule": ["weighted_rule_without_metadata", "weighted_rule_with_metadata"],
+    "special_formula": ["member_formula", "builtin_formula"],
+    "atomic_formula": ["special_formula", "normal_atomic_formula"],
+}
+name_to_group_name = {name: group for group, names in grouped_name.items() for name in names}
 
-class RuleSpecializationTransformer(Transformer):
+
+class DFSTransformer:
+    """
+    DepthFirstSearchTransformer
+    Similar to :class:`lark.Transformer` but instead of passing only children to function,
+    DFSTransformer passes the root of the subtrees.
+    """
+
+    def transform(self, root):
+        if type(root) != Tree:
+            return root
+        transformed_children = []
+        for child in root.children:
+            transformed_children.append(self.transform(child))
+        f = self._get_func(root.data)
+        return f(Tree(root.data, transformed_children))
+
+    def _get_func(self, name):
+        if hasattr(self, name):
+            f = getattr(self, name)
+        elif name in name_to_group_name and hasattr(self, name_to_group_name[name]):
+            f = getattr(self, name_to_group_name[name])
+        else:
+            f = self.default
+        return f
+
     @staticmethod
-    def weighted_rule_with_metadata(children):
-        weighted_rule_without_metadata = children[0]
-        weight = weighted_rule_without_metadata["weight"]
-        rule = weighted_rule_without_metadata["rule"]
-        metadata = children[1]
+    def default(root):
+        return root
+
+
+class RuleSpecializationTransformer(DFSTransformer):
+    """
+    RuleSpecializationTransformer search for and transform (specialize) rule to multiple specialized rules.
+    Example:
+    INPUT:
+    `0.0 predicate(constant) :- predicate2(SpecVariable),member(SpecVariable,[a,b,c]). [^SpecVariable]`
+    OUTPUT:
+    `0.0 predicate(constant) :- predicate2(a).
+     0.0 predicate(constant) :- predicate2(b).
+     0.0 predicate(constant) :- predicate2(c).`
+    """
+    @staticmethod
+    def rule(root):
+        rule = root
+        if not has_metadata(root):
+            return root
+        metadata = root["metadata"]
         specialization_variables = [variable[0] for variable in metadata.find_data("specialization_variable")]
         other_metadata = [value for value in metadata.children if value.data != "specialization_variable"]
         member_formulas = list(rule.find_data("member_formula"))
-        variable_constants = {}
+        variable_constants = OrderedDict()
         for specialization_variable in specialization_variables:
             for member_formula in member_formulas:
                 if member_formula["term_list"][0] == specialization_variable:
@@ -36,57 +80,30 @@ class RuleSpecializationTransformer(Transformer):
         rules = []
         stripped_rule = Tree('rule',
                              [child for child in rule.children if len(list(child.find_data("member_formula"))) == 0])
+        if other_metadata:
+            stripped_rule["metadata"] = Tree("metadata", other_metadata)
+        else:
+            del stripped_rule["metadata"]
+
         for substitutions in product(*variable_substitutions):
             new_rule = stripped_rule
             for variable, value in substitutions:
                 new_rule = TreeSubstituter(variable, value).transform(new_rule)
             rules.append(new_rule)
-        rules = [Tree("weighted_rule_without_metadata", [weight, rule]) for rule in rules]
-        if other_metadata:
-            rules = [Tree("weighted_rule_with_metadata", [rule, Tree('metadata', other_metadata)]) for rule in rules]
         if specialization_variables:
             return rules
         else:
-            return Tree("weighted_rule_with_metadata", children)
+            return root
 
     @staticmethod
-    def rule_file(lines):
+    def rule_file(root):
         output = []
-        for line in lines:
+        for line in root.children:
             if isinstance(line, list):
                 output += [child for child in line]
             else:
                 output.append(line)
         return Tree('rule_file', output)
-
-
-lark.tree.Visitor.__default__ = lambda self, item: item
-
-grouped_name = {
-    "weighted_rule": ["weighted_rule_without_metadata", "weighted_rule_with_metadata"],
-    "special_formula": ["member_formula", "builtin_formula"],
-    "atomic_formula": ["special_formula", "normal_atomic_formula"],
-}
-name_to_group_name = {name: group for group, names in grouped_name.items() for name in names}
-
-
-class DFSTransformer:
-    def transform(self, root):
-        if type(root) != Tree:
-            return root
-        transformed_children = []
-        for child in root.children:
-            transformed_children.append(self.transform(child))
-        if hasattr(self, root.data):
-            f = getattr(self, root.data)
-        elif root.data in name_to_group_name and hasattr(self, name_to_group_name[root.data]):
-            f = getattr(self, name_to_group_name[root.data])
-        else:
-            f = self.default
-        return f(Tree(root.data, transformed_children))
-
-    def default(self, root):
-        return root
 
 
 class AtomicFormulaEraser(Transformer):
@@ -98,6 +115,12 @@ class AtomicFormulaEraser(Transformer):
 
 
 class RangePredicateTransformer:
+    """
+    Substitution Transformer to handle special range predicate.
+    Range predicate has form `range(-VariableName,+start,+end)` with both start and end inclusive.
+    Transformer will substitute every occurence of `VariableName` with list that has constants from `start` to `end`.
+    Start and end can be either numbers or letters.
+    """
     @staticmethod
     def transform(root):
         for ind, line in enumerate(root.children[:]):
@@ -113,40 +136,45 @@ class RangePredicateTransformer:
                 except ValueError:
                     assert type(start) == str and type(end) == str
                     substitution = Tree('constant_list',
-                                        [Token("CONSTANT", chr(i)) for i in range(ord(start), ord(end)+1)])
+                                        [Token("CONSTANT", chr(i)) for i in range(ord(start), ord(end) + 1)])
                 root.children[ind] = AtomicFormulaEraser(range_pred).transform(root.children[ind])
                 root.children[ind] = TreeSubstituter(variable, substitution).transform(root.children[ind])
         return root
 
 
 class LambdaKappaTransformer(DFSTransformer):
+    """
+    Transform new Prolog like representation to Lambda Kappa representation used in LRNN.
+    Example:
+    INPUT:
+    `0.0 happy(Person) :- friends(Person),family(Person).`
+    OUTPUT:
+    `0.0 happy(Person) :- __Var0_happy(Person).`: Kappa rule
+    `__Var0_happy(Person) :- friends(Person),family(Person).`: Lambda rule
+    """
     def __init__(self):
-        self.rule_variants = {}
+        self.rule_variants = OrderedDict()
 
-    def weighted_rule_without_metadata(self, weighted_rule_without_metadata):
-        # Transform weighted_rule_without_metadata to 2 rules
+    def rule(self, rule):
+        # Transform rule to lambda kappa rules
         output = []
-        weight = weighted_rule_without_metadata["weight"]
-        rule = weighted_rule_without_metadata["rule"]
+        weight = rule["weight"]
         head = rule["head"]
         head_predicate = head["PREDICATE"]
         self.rule_variants.setdefault(head_predicate, 0)
-        new_name = VARIANT_PREFIX + str(self.rule_variants[head_predicate]) + "_" + head_predicate.value
+        new_predicate_name = VARIANT_PREFIX + str(self.rule_variants[head_predicate]) + "_" + head_predicate.value
         self.rule_variants[head_predicate] += 1
-        renamed_head = TokenRenamer("PREDICATE", head_predicate.value, new_name).transform(head)
+        renamed_head = TokenRenamer("PREDICATE", head_predicate.value, new_predicate_name).transform(head)
         tail = rule["body"]
         # Add Lambda rule
         output.append(Tree('rule', [renamed_head, *tail]))
         # Add Kappa rule
-        output.append(Tree('weighted_rule_without_metadata', [weight, Tree('rule', [head, renamed_head])]))
+        output.append(Tree('rule', [weight, head, renamed_head]))
+        if has_metadata(rule):
+            head = rule["head"]
+            arity = len(head["term_list"].children)
+            output.append(Tree('predicate_metadata', [new_predicate_name, str(arity), rule["metadata"]]))
         return output
-
-    def weighted_rule_with_metadata(self, root):
-        children = root.children[0]
-        head = root.children[0][0]["head"]
-        arity = len(head["term_list"].children)
-        children.append(Tree('predicate_metadata', [head["PREDICATE"], str(arity), root["metadata"]]))
-        return children
 
     @staticmethod
     def rule_file(root):
@@ -158,28 +186,30 @@ class LambdaKappaTransformer(DFSTransformer):
                 output.append(line)
         return Tree('rule_file', output)
 
-
-class LambdaKappaJoiner:
     @staticmethod
-    def transform(root):
-        rule_variants = {}
+    def restore(root):
+        rule_variants = OrderedDict()
         for line in root.children[:]:
             child = line
-            if child.data == "rule" and child["head"]["PREDICATE"].value.startswith(VARIANT_PREFIX):
+            if child.data == "rule" and not has_weight(child) and child["head"]["PREDICATE"].value.startswith(
+                    VARIANT_PREFIX):
                 rule_variants[child["head"]] = child["body"]
                 root.children.remove(line)
         for rule_variant, rule_body in rule_variants.items():
             for line in root.children:
                 child = line
-                if child.data == "weighted_rule_without_metadata":
-                    rule = child['rule']
-                    body = rule['body']
+                if child.data == "rule" and has_weight(child):
+                    body = child['body'][0]
                     if body == rule_variant:
-                        rule.children = [rule['head'], *rule_body]
+                        child.children = [child["weight"], child['head'], *rule_body]
         return root
 
 
 class FixZeroArity(Transformer):
+    """
+    Workaround for missing zero arity predicates.
+    Each predicate that has zero arity will be converted to predicate of arity 1 with constant a.
+    """
     def _get_func(self, name):
         if name in ["predicate_metadata", "predicate_offset"]:
             return lambda children: Tree(name,
@@ -197,6 +227,9 @@ class FixZeroArity(Transformer):
 
 
 class ReduceFinalKappa:
+    """
+    Workaround to be able to resolve and end up with every predicate instead of just predicate named finalKappa.
+    """
     @staticmethod
     def transform(root):
         output = root.children
@@ -208,10 +241,21 @@ class ReduceFinalKappa:
         output.append(neurologic_parser.parse(rule).children[0])
         return Tree(root.data, output)
 
+    @staticmethod
+    def restore(root):
+        for ind, line in enumerate(root.children[:]):
+            try:
+                next(line.find_pred(
+                    lambda x: x.data == "normal_atomic_formula" and x["PREDICATE"].value == "finalKappa"))
+                root.children.remove(line)
+            except StopIteration:
+                pass
+        return root
+
 
 def list_all_predicates(root):
     atomic_formulas = root.find_data("normal_atomic_formula")
-    predicates = set()
+    predicates = OrderedSet()
     for atomic_formula in atomic_formulas:
         predicate_name = atomic_formula["PREDICATE"].value
         predicate_arity = len(atomic_formula["term_list"].children)
@@ -220,6 +264,9 @@ def list_all_predicates(root):
 
 
 class FixedOffsetTransformer:
+    """
+    Fix offset of every predicate to zero.
+    """
     @staticmethod
     def transform(root):
         output = root.children
@@ -229,65 +276,100 @@ class FixedOffsetTransformer:
                                           Tree('fixed_weight', [Token("SIGNED_NUMBER", '0.0')])]))
         return Tree(root.data, output)
 
+    @staticmethod
+    def restore(root):
+        for line in root.children[:]:
+            if line.data == "predicate_offset":
+                root.children.remove(line)
+        return root
 
-class ToCodeTransformer(Transformer):
+
+class ToCodeTransformer(DFSTransformer):
+    """
+    Convert the tree representation of code back to text.
+    """
     def _get_func(self, name):
-        if name in ["atomic_formula", "initial_weight", "meaningful_line", "term", "metadata_value", "special_formula",
-                    "weighted_rule"]:
-            return lambda x: x[0]
-        elif name in ["weighted_rule_without_metadata", "weighted_fact", "weighted_rule_with_metadata"]:
-            return lambda x: x[0] + " " + x[1]
+        if name in ["initial_weight", "metadata_value"]:
+            return lambda x: x.children[0]
         elif name in ["normal_atomic_formula", "builtin_formula"]:
-            return lambda children: children[0] + children[1]
+            return lambda root: root.children[0] + root.children[1]
         else:
             return super()._get_func(name)
 
     @staticmethod
-    def term_list(children):
-        return "(" + ",".join(children) + ")"
+    def term_list(root):
+        return "(" + ",".join(root.children) + ")"
 
     @staticmethod
-    def rule(children):
-        return children[0] + " :- " + ",".join(children[1:]) + "."
+    def rule(root):
+        weight_part = ToCodeTransformer.get_weight_part(root)
+        if "[" in root.children[-1]:
+            metadata_part = " " + root.children[-1]
+        else:
+            metadata_part = ""
+
+        return weight_part + root[1 if weight_part else 0] + " :- " + ",".join(
+            root[(2 if weight_part else 1):(-1 if metadata_part else None)]) + "." + metadata_part
 
     @staticmethod
-    def fixed_weight(children):
-        return "<" + children[0] + ">"
+    def get_weight_part(root):
+        if ToCodeTransformer.has_weight(root):
+            weight_part = root.children[0] + " "
+        else:
+            weight_part = ""
+        return weight_part
 
     @staticmethod
-    def specialization_variable(children):
-        return "^" + children[0]
+    def has_weight(root):
+        try:
+            float(root.children[0].strip("<>"))  # check if is a number
+            return True
+        except:
+            return False
 
     @staticmethod
-    def metadata(children):
-        return "[" + ",".join(children) + "]"
+    def fixed_weight(root):
+        return "<" + root.children[0] + ">"
 
     @staticmethod
-    def predicate_metadata(children):
-        return children[0] + "/" + children[1] + " " + children[2]
+    def specialization_variable(root):
+        return "^" + root.children[0]
 
     @staticmethod
-    def predicate_offset(children):
-        return children[0] + "/" + children[1] + " " + children[2]
+    def metadata(root):
+        return "[" + ",".join(root.children) + "]"
 
     @staticmethod
-    def fact(children):
-        return children[0] + "."
+    def predicate_metadata(root):
+        return root.children[0] + "/" + root.children[1] + " " + root.children[2]
 
     @staticmethod
-    def weighted_conjunction(children):
-        return children[0] + " " + ",".join(children[1:]) + "."
+    def predicate_offset(root):
+        return root.children[0] + "/" + root.children[1] + " " + root.children[2]
 
     @staticmethod
-    def rule_file(children):
-        return "\n".join(children)
+    def fact(root):
+        weight_part = ToCodeTransformer.get_weight_part(root)
+        return weight_part + root.children[1 if ToCodeTransformer.has_weight(root) else 0] + "."
+
+    @staticmethod
+    def weighted_conjunction(root):
+        return root.children[0] + " " + ",".join(root.children[1:]) + "."
+
+    @staticmethod
+    def rule_file(root):
+        return "\n".join(root.children)
 
 
-def transform(text):
+def transform(text: str) -> str:
+    """
+    Parse input template, run all transformation on it and return the transformed text representation of it.
+    """
     logger.debug(f"Transforming code: {text}")
     tree = neurologic_parser.parse(text)
     range_transformed = RangePredicateTransformer().transform(tree)
     unfolded_specialization = RuleSpecializationTransformer().transform(range_transformed)
+    logger.debug(f"Code after handling special predicates:\n\n{ToCodeTransformer().transform(unfolded_specialization)}")
     fixed_arity = FixZeroArity().transform(unfolded_specialization)
     reduced_final_kappa = ReduceFinalKappa().transform(fixed_arity)
     fixed_offset = FixedOffsetTransformer().transform(reduced_final_kappa)
@@ -298,9 +380,14 @@ def transform(text):
 
 
 def transform_result(text):
+    """
+    Parse learned template, run all transformation on it and return the transformed text representation of it.
+    """
     tree = neurologic_parser.parse(text)
     logger.debug(f"Transforming code: {text}")
-    joined_kappa_lambda = LambdaKappaJoiner.transform(tree)
-    transformed_code = ToCodeTransformer().transform(joined_kappa_lambda)
+    joined_kappa_lambda = LambdaKappaTransformer.restore(tree)
+    removed_offset = FixedOffsetTransformer().restore(joined_kappa_lambda)
+    removed_final_kappa = ReduceFinalKappa().restore(removed_offset)
+    transformed_code = ToCodeTransformer().transform(removed_final_kappa)
     logger.debug(f"Transformed code: {transformed_code}")
     return transformed_code

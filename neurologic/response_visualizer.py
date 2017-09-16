@@ -1,19 +1,19 @@
 import os
 from collections import OrderedDict
+from functools import lru_cache
 
+import holoviews as hv
+import jnius_config
 from lark import Tree
 from lark.lexer import Token
-from neurologic import ToCodeTransformer
+
+from neurologic import ToCodeTransformer, RangePredicateTransformer, RuleSpecializationTransformer
 from neurologic.common import weights_from_ser
-from functools import lru_cache
 from neurologic.config import neurologic_parser
-import holoviews as hv
 from neurologic.examples_transformer import transform_from_tree
-import jnius_config
 
 jnius_config.set_classpath(os.path.join(os.path.dirname(__file__), "neurologic.jar"))
 import jnius
-from jnius import autoclass
 
 jInt = jnius.autoclass('java.lang.Integer')
 jLong = jnius.autoclass('java.lang.Long')
@@ -24,12 +24,11 @@ Playground = jnius.autoclass('lrnn.Playground')
 Playground.init(["-r", "./.rules_raw.pl"])
 memoize = lru_cache(maxsize=None)
 
-def resolve_inout(tree):
+
+def resolve_inout(tree: Tree):
     """
-    :param tree:
     :return: {tuple("<normal_atomic_formula>"): set("<normal_atomic_formula>")}
     """
-    # TODO apply transformations to tree
     points = {}
     for rule in tree.children:
         point = points.get(tuple(rule["body"]), set())
@@ -41,7 +40,6 @@ def resolve_inout(tree):
 def number_formulas(transformed_tree: Tree):
     counter = 0
     formula_number = OrderedDict()
-    # for formula in transformed_tree.find_data("normal_atomic_formula"):
     for rule in transformed_tree.children:
         formula = rule["head"]
         if formula not in formula_number:
@@ -52,7 +50,6 @@ def number_formulas(transformed_tree: Tree):
 
 def _get_outputs(points, weights):
     """
-
     :param points:
     :param weights:
     :return: {tuple(<normal_atomic_formula>): {<normal_atomic_formula>: <int>}}
@@ -61,9 +58,8 @@ def _get_outputs(points, weights):
     for point, dimensions in points.items():
         points[point] = {}
         for i, dimension in enumerate(dimensions):
-            example_text = transform_from_tree(Tree('weighted_rule_without_metadata', [
-                Tree("initial_weight", [Token("SIGNED_NUMBER", '0.0')]),
-                Tree('rule', [dimension, *point])]))
+            example_text = transform_from_tree(Tree('rule', [
+                Tree("initial_weight", [Token("SIGNED_NUMBER", '0.0')]), dimension, *point]))
             example = memoize(Playground.createExample)(example_text)
             value = Playground.evaluateExample(example)
             points[point][dimension] = value
@@ -95,7 +91,6 @@ def _get_coords(points, formula_number):
     return coords
 
 
-
 def _plot_response(points, formula_number, output_folder):
     def _plot_step(step, restart, fold):
         weights = memoize(weights_from_ser)(output_folder, restart, fold)
@@ -113,8 +108,18 @@ def _plot_response(points, formula_number, output_folder):
                                             hv.Dimension("Fold", range=(0, 3))])
 
 
-def plot_response(response_file, output_folder):
+def transform_response(tree: Tree) -> Tree:
+    """
+    Execute only the Range and RuleSpecializationTransformed on the tree.
+    """
+    range_transformed = RangePredicateTransformer().transform(tree)
+    unfolded_specialization = RuleSpecializationTransformer().transform(range_transformed)
+    return unfolded_specialization
+
+
+def plot_response(response_file, output_folder) -> hv.DynamicMap:
     tree = neurologic_parser.parse(open(response_file, 'r').read())
-    points = resolve_inout(tree)
-    formula_number = number_formulas(tree)
+    transformed_tree = transform_response(tree)
+    points = resolve_inout(transformed_tree)
+    formula_number = number_formulas(transformed_tree)
     return _plot_response(points, formula_number, output_folder)

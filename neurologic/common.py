@@ -2,8 +2,11 @@ import json
 import os
 import re
 import struct
+import typing
 from collections import OrderedDict
 from glob import glob
+from typing import Union
+
 import pandas as pd
 
 
@@ -24,7 +27,7 @@ def extract_parameters(filename):
 
 def extract_all_parameters(base_path, base_name):
     all_parameters = OrderedDict()
-    for name in glob(base_path + f"{base_name}*/learning_stats-fold*-restart*"):
+    for name in glob(os.path.join(base_path,f"{base_name}*","learning_stats-fold*-restart*")):
         parameters = extract_parameters(name)
         for ind, params in enumerate(parameters):
             for key, value in params.items():
@@ -33,16 +36,27 @@ def extract_all_parameters(base_path, base_name):
     return all_parameters
 
 
-def weights_from_ser(base_path, fold, restart):
-    data_path = base_path + f"weightsHistory-fold{fold}-restart{restart}.ser"
-    headers = open(base_path + "weightNames.csv").read().split(",")
+def weights_from_ser(base_path: str, fold: Union[str, int], restart: Union[str, int]) -> pd.DataFrame:
+    """
+    Load weights from .ser format.
+    :param base_path: Path to neurologic output folder
+    :param fold: Fold number
+    :param restart: Restart number
+    :return:
+    """
+    data_path = os.path.join(base_path,f"weightsHistory-fold{fold}-restart{restart}.ser")
+    headers_table = pd.read_csv(os.path.join(base_path,"weightNames.csv"))
     data = parse(open(data_path, 'rb'))
     df = pd.DataFrame(data[0]['data'])
-    df.columns = headers
+    df.columns = headers_table.columns
     return df
 
 
-def parse(f):
+def parse(f: typing.BinaryIO):
+    """
+    Parse Java .ser format and convert it to Python equivalent object.
+    :return: Python dict, array, string or int
+    """
     h = lambda s: ' '.join('%.2X' % x for x in s)  # format as hex
     p = lambda s: sum(x * 256 ** i for i, x in enumerate(reversed(s)))  # parse integer
     magic = f.read(2)
@@ -200,7 +214,7 @@ class OldExampleFactory:
         self.examples = []
         self.static_facts = []
 
-    def add_ex(self, predicates, target_value, final_predicate):
+    def add_ex(self, predicates, target_value):
         self.examples.append((target_value, predicates))
 
     def get_str(self):
@@ -209,7 +223,7 @@ class OldExampleFactory:
 
     def save(self, path, name="examples.pl"):
         os.makedirs(path, exist_ok=True)
-        with open(path + name, "w") as f:
+        with open(os.path.join(path,name), "w") as f:
             f.write(self.get_str())
 
 
@@ -227,5 +241,5 @@ class ExampleFactory:
 
     def save(self, path, name="examples.pl"):
         os.makedirs(path, exist_ok=True)
-        with open(path + name, "w") as f:
+        with open(os.path.join(path, name), "w") as f:
             f.write(self.get_str())

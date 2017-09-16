@@ -1,9 +1,13 @@
+"""
+Deprecated. Use examples_transformer instead.
+"""
 import re
 import sys
+import warnings
+warnings.warn("Deprecated. Use examples_transformer instead.", DeprecationWarning)
 
 rule_match = r"(.+?)(\(.+?\))?"
 rule_pattern = r"(<?-?\d+\.?\d*>?)[ \t]+(.+?)(\(.*?\))?[ \t]+:-[ \t]+(.+)?\.[ \t]*(?:\n|$)"
-
 
 def unfold_examples(rule_str):
     output = []

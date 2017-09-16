@@ -1,3 +1,5 @@
+import typing
+
 from lark import Tree
 from lark.lexer import Token
 
@@ -31,22 +33,50 @@ class TreeSubstituter:
             return Tree(root.data, [self.transform(child) for child in root.children])
 
 
-def patch_tree(named_children):
+def patch_tree(named_children: typing.Dict[str, typing.Dict[str, typing.Union[typing.Callable, int, slice]]]):
+    """
+    Patch :class:`lark.Tree` so it supports named indexing of children.
+    :param named_children: Dictionary with tree names as keys and
+                           inner dictionary with children names and its indexes as values.
+    """
     import lark
 
+    def get_index(self, item):
+        if type(item) == str:
+            index = named_children[self.data][item]
+            if callable(index):
+                index = index(self)
+            return index
+        else:
+            return item
+
     def get_item(self, item):
-        return self.children[named_children[self.data][item] if type(item) == str else item]
+        return self.children[get_index(self, item)]
 
     def set_item(self, item, value):
-        self.children[named_children[self.data][item] if type(item) == str else item] = value
+        self.children[get_index(self, item)] = value
+
+    def del_item(self, item):
+        del self.children[get_index(self, item)]
 
     lark.tree.Tree.__getitem__ = get_item
     lark.tree.Tree.__setitem__ = set_item
+    lark.tree.Tree.__delitem__ = del_item
+
+
+def has_weight(rule_root):
+    return rule_root.children[0].data in ["fixed_weight", "initial_weight"]
+
+
+def has_metadata(rule_root):
+    return rule_root.children[-1].data == "metadata"
+
 
 named_children = {
-    "rule": {"head": 0, "body": slice(1, None, None)},
-    "weighted_rule_without_metadata": {"weight": 0, "rule": 1},
-    "weighted_rule_with_metadata": {"weighted_rule_without_metadata": 0, "metadata": 1},
+    "rule": {"weight": lambda root: 0 if has_weight(root) else None,
+             "head": lambda root: 1 if has_weight(root) else 0,
+             "body": lambda root: slice(2 if has_weight(root) else 1, -1 if has_metadata(root) else None, None),
+             "metadata": lambda root: -1 if has_metadata(root) else None},
     "normal_atomic_formula": {"PREDICATE": 0, "term_list": 1},
     "predicate_metadata": {"PREDICATE": 0, "ARITY": 1, "metadata": 2},
     "predicate_offset": {"PREDICATE": 0, "ARITY": 1, "offset": 2},

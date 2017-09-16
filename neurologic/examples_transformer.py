@@ -6,25 +6,27 @@ from lark.lexer import Token
 from neurologic import lark_utils
 from neurologic.config import FINAL_PREFIX, neurologic_parser
 from neurologic.lark_utils import patch_tree
-from neurologic.template_transformer import ToCodeTransformer, FixZeroArity
+from neurologic.template_transformer import ToCodeTransformer, FixZeroArity, DFSTransformer
 
 logger = logging.getLogger(__name__)
 
 patch_tree(lark_utils.named_children)
 
 
-class ExampleToOldVersion(Transformer):
+class ExampleToOldVersion(DFSTransformer):
+    """
+    New Version: Rule
+    `1.0 target_predicate(constant1) :- evidence_predicate(constant2),evidence_predicate(constant3).`
+    Old Version: Conjunction
+    `1.0 evidence_predicate(constant2),evidence_predicate(constant3).`
+    """
     @staticmethod
-    def weighted_rule_without_metadata(children):
-        weight = children[0]
-        rule = children[1]
+    def rule(root):
+        weight = root["weight"]
+        rule = root
         head_formula = rule['head']
         head_formula["PREDICATE"] = Token("PREDICATE", FINAL_PREFIX + head_formula["PREDICATE"].value)
         return Tree('weighted_conjunction', [weight, *rule["body"], head_formula])
-
-    @staticmethod
-    def weighted_rule(children):
-        return children[0]
 
 
 def transform_from_tree(tree):

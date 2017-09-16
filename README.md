@@ -27,6 +27,7 @@ jupyter nbextension enable --sys-prefix neurologic_highlighter/main
 jupyter nbextension enable --sys-prefix --py widgetsnbextension
 ```
 ### Vagrant version
+# TODO add short info about every option (https://www.vagrantup.com)
 ```bash
 vagrant up
 ```

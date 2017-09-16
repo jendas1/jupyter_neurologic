@@ -1,0 +1,1 @@
+cardFromGroup(Group,0) :- card(0,2,spades),range(RangeGroup,2,5),member(Group,RangeGroup). [^Group]

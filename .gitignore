@@ -96,3 +96,7 @@ outputs/
 .examples_raw.pl
 neurologic.egg-info/
 __pycache__/
+
+# Vagrant
+
+.vagrant/

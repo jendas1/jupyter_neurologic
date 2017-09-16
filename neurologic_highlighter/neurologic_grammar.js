@@ -1,5 +1,6 @@
 /**
  * Created by janstudeny on 20/07/2017.
+ * doplnit komentáře pro všechna rozhodnutí, který jsem udělal
  */
 define({
 
@@ -19,6 +20,7 @@ define({
         , "string": "string"
         , "error": "error"
         , "PREDICATE": "attribute"
+        , "INTERNAL_PREDICATE": "attribute"
         , "VARIABLE": "string"
         , "CONSTANT": "string-2"
         , "_IMPLIED_BY": "operator"

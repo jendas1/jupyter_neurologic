@@ -10,5 +10,6 @@ setup(
     author='Jan Studený',
     author_email='',
     description='',
-    requires=['holoviews', 'pandas', 'jupyter', 'lark-parser', 'ipywidgets', 'bokeh', 'matplotlib', 'pyparsing']
+    requires=['holoviews', 'pandas', 'jupyter', 'lark-parser',
+              'ipywidgets', 'bokeh', 'matplotlib', 'pyparsing', "orderedset"]
 )
