@@ -6,27 +6,20 @@ To showcase most important tools, simple tutorial in form of Jupyter notebooks w
 [Jupyter notebooks](www.jupyter.org) are interactive and rich documents with ability to contain code as well.
 To open these notebooks and use all tools inside you need to install various dependencies.
 
-For the most simplest and autonomous way, go for the [vagrant version](vagrant-version).
+For the most simplest and autonomous way, go for the [vagrant version](#vagrant-version).
 Vagrant is a program that creates and run virtual machine with all dependencies automatically installed.
 
-If you use conda, go for the [conda version](conda-version) that as well as vagrant handles all dependencies.
+If you use conda, go for the [conda version](#conda-version) that as well as vagrant handles all dependencies.
 
-For most experienced user use [pip version](pip-version) to install all needed packages to open and run neurologic code.
+For most experienced user use [pip version](#pip-version) to install all needed packages to open and run neurologic code.
 ## Install versions
-### Pip version
-Note: Java 8 or greater and Python 3.6 or greater is required.
+### Vagrant version
+You have to have vagrant installed. To install it, visit https://www.vagrantup.com .
+After that, just open terminal with this folder as a current directory and run:
 ```bash
-# core
-pip3 install .
-
-# neurologic code highlighting
-jupyter nbextension install neurologic_highlighter/
-jupyter nbextension enable neurologic_highlighter/main
-
-# enable displaying neural nets
-jupyter nbextension enable --py widgetsnbextension
+vagrant up
 ```
-After installation, run `jupyter notebok` that will open browser. In that window, click on `1. Getting started with NeuroLogic programming.ipynb`. Enjoy!
+Wait until start of VM and access jupyter notebook on port 9999 (exact url will be shown in terminal).
 ### Conda version
 ```bash
 # core
@@ -41,10 +34,18 @@ jupyter nbextension enable --sys-prefix neurologic_highlighter/main
 jupyter nbextension enable --sys-prefix --py widgetsnbextension
 ```
 After installation, run `jupyter notebok` that will open browser. In that window, click on `1. Getting started with NeuroLogic programming.ipynb`. Enjoy!
-### Vagrant version
-You have to have vagrant installed. To install it, visit https://www.vagrantup.com .
-After that, just open terminal with this folder as a current directory and run:
+### Pip version
+Note: Java 8 or greater and Python 3.6 or greater is required.
 ```bash
-vagrant up
+# core
+pip3 install .
+
+# neurologic code highlighting
+jupyter nbextension install neurologic_highlighter/
+jupyter nbextension enable neurologic_highlighter/main
+
+# enable displaying neural nets
+jupyter nbextension enable --py widgetsnbextension
 ```
-Wait until start of VM and access jupyter notebook on port 9999 (exact url will be shown in terminal).
+After installation, run `jupyter notebok` that will open browser. In that window, click on `1. Getting started with NeuroLogic programming.ipynb`. Enjoy!
+
