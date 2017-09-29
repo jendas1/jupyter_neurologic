@@ -1,20 +1,17 @@
 import glob
 import os
-import re
 import subprocess
 from collections import OrderedDict
 from glob import glob, escape
-from os.path import dirname
 
 import holoviews as hv
-import pandas as pd
+import ipywidgets as widgets
 from IPython.core.display import display_svg
 from ipywidgets import interact
-import ipywidgets as widgets
 
-from neurologic.common import parse, extract_parameters
 from neurologic import examples_transformer
 from neurologic import template_transformer
+from neurologic.common import extract_parameters, _svg_from_dot
 
 NEUROLOGIC_JAR_PATH = os.path.join(os.path.dirname(__file__), "neurologic.jar")
 RAW_RULES_PATH = "./.rules_raw.pl"
@@ -39,7 +36,7 @@ def _get_all_parameters(output_folder):
 
 
 def kwargs_to_cli(**kwargs):
-    return [f"--{key}={value.replace('_','-')}" for key, value in kwargs.items()]
+    return [f"--{key.replace('_','-')}={value}" for key, value in kwargs.items()]
 
 
 def _execute_jar(jar_path, parameters):
@@ -51,8 +48,23 @@ def _execute_jar(jar_path, parameters):
     return process
 
 
-def _get_output_folder(parameters):
-    return os.path.join(".", "outputs", os.path.dirname(parameters["rules"]))
+def _get_output_folder(rule_path):
+    """
+    Return location of output folder based on rule name.
+    Same implementation can be found also in Java Neurologic.
+    """
+    folder_name = os.path.basename(os.path.dirname(rule_path))
+    file_name = os.path.basename(rule_path).split(".")[0]
+    rule_names = {"rules", "template"}
+    if folder_name not in [".", ""] and file_name in rule_names:
+        output_folder = folder_name
+    elif any(map(lambda name: file_name.endswith("_" + name), rule_names)):
+        output_folder = file_name.rsplit("_", 1)[0]
+    elif file_name not in rule_names:
+        output_folder = file_name
+    else:
+        output_folder = "unnamed"
+    return os.path.join(".", "outputs", output_folder, "")
 
 
 def run(rules_path, training_set_path, **kwargs):
@@ -65,7 +77,7 @@ def run(rules_path, training_set_path, **kwargs):
     Keyword Arguments:
         activations <ACTIVATION>                      lambda-kappa
                                                          activation functions
-                                                         (default: sig_sig)
+                                                         (default: id_id)
         alldiff <arg>                            Differently named
                                                          variables in a single
                                                          rule must bind to
@@ -153,55 +165,19 @@ def run(rules_path, training_set_path, **kwargs):
         f.write(examples_transformer.transform(open(training_set_path, "r").read()))
     parameters["examples"] = RAW_EXAMPLES_PATH
     parameters["rules"] = RAW_RULES_PATH
+    if "output" not in parameters:
+        parameters["output"] = _get_output_folder(rules_path)
+
+    # Global option
+    if "activations" not in parameters:
+        parameters["activations"] = "id_id"
+    renamed_keys = {
+        "aggregation": "grounding"
+    }
+    parameters = {key if key not in renamed_keys else renamed_keys[key]: value for key, value in parameters.items()}
+
     _execute_jar(NEUROLOGIC_JAR_PATH, kwargs_to_cli(**parameters))
-    return _get_output_folder(parameters)
-
-
-def _stats_from_ser(base_path, fold, restart):
-    data_path = os.path.join(base_path, f"learning_stats-fold{fold}-restart{restart}.ser")
-    headers = open(os.path.join(base_path, "learning_statsNames.csv")).read().split(",")
-    data = parse(open(data_path, 'rb'))
-    df = pd.DataFrame(data[0]['data'])
-    df = df.T
-    df.columns = headers
-    return df
-
-
-def _load_statistics(output_folder: str):
-    raw_stats = []
-    raw_info = []
-    for stats in glob(os.path.join(escape(output_folder), "learning_stats-fold*-restart*.*")):
-        learning_parameters = {"fold": int(re.search(r"fold([0-9]+)", stats).group(1)),
-                               "restart": int(re.search(r"restart([0-9]+)", stats).group(1))}
-        if stats.endswith(".ser"):
-            raw_stats.append(
-                _stats_from_ser(dirname(stats), learning_parameters["fold"], learning_parameters['restart']))
-        else:
-            raw_stats.append(pd.read_csv(stats))
-        raw_info.append(learning_parameters)
-    return raw_stats, raw_info
-
-
-def _stats_plot(raw_stats, raw_info, **kwargs):
-    ind = dict(kwargs)
-    error_type = ind.pop("error type")
-    data = raw_stats[raw_info.index(ind)]
-    return hv.Curve(data[_error_indexes[error_type]], kdims=[hv.Dimension('Epoch')], vdims=[hv.Dimension('Error')])
-
-
-def plot_statistics(output_folder: str):
-    """
-
-    :param output_folder: Path to neurologic output folder
-    :return:
-    """
-    raw_stats, raw_info = _load_statistics(output_folder)
-    parameters = _get_all_parameters(output_folder)
-    dimensions = [hv.Dimension(key, values=list(value['values'])) for key, value in parameters.items()]
-    dmap = hv.DynamicMap(
-        lambda *vals: _stats_plot(raw_stats, raw_info, **{key: vals[i] for i, key in enumerate(parameters.keys())}),
-        kdims=dimensions)
-    return dmap
+    return parameters["output"]
 
 
 def _display_neural_net_holoviews(output_folder: str, example_index: int):
@@ -213,14 +189,8 @@ def _display_neural_net_holoviews(output_folder: str, example_index: int):
 
 
 def _display_neural_net_svg(output_folder: str, example_index: int):
-    image_file = os.path.join(output_folder, "images", f"network β #{example_index} post learning.svg")
     dot_file = os.path.join(output_folder, "images", f"network β #{example_index} post learning.dot")
-    if not os.path.exists(image_file) or True:
-        subprocess.run(["dot", "-Tsvg", dot_file, "-o", image_file])
-    # Workaround for normal size
-    svg_data = open(image_file, "r").read()
-    svg_data = re.sub('<svg width="[0-9]+pt" height="[0-9]+pt"', '<svg width="100%" height="100%"', svg_data)
-    return display_svg(svg_data, raw=True)
+    return display_svg(_svg_from_dot(dot_file), raw=True)
 
 
 def _display_neural_nets_holoviews(output_folder: str):

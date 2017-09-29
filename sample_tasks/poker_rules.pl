@@ -1,6 +1,6 @@
 0.0 cardFromGroup(Group,Position) :- card(Position,Rank,Suit),
                                      range(GroupRange,2,5),
-                                     member(Group,RankRange),
+                                     member(Group,GroupRange),
                                      range(RankRange,2,5),
                                      member(Rank,RankRange),
                                      member(Suit,[hearts,diamonds,clubs,spades]). [^Rank,^Suit,^Group,lukasiewicz]

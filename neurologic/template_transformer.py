@@ -59,6 +59,7 @@ class RuleSpecializationTransformer(DFSTransformer):
      0.0 predicate(constant) :- predicate2(b).
      0.0 predicate(constant) :- predicate2(c).`
     """
+
     @staticmethod
     def rule(root):
         rule = root
@@ -121,6 +122,7 @@ class RangePredicateTransformer:
     Transformer will substitute every occurence of `VariableName` with list that has constants from `start` to `end`.
     Start and end can be either numbers or letters.
     """
+
     @staticmethod
     def transform(root):
         for ind, line in enumerate(root.children[:]):
@@ -152,6 +154,7 @@ class LambdaKappaTransformer(DFSTransformer):
     `0.0 happy(Person) :- __Var0_happy(Person).`: Kappa rule
     `__Var0_happy(Person) :- friends(Person),family(Person).`: Lambda rule
     """
+
     def __init__(self):
         self.rule_variants = OrderedDict()
 
@@ -208,8 +211,10 @@ class LambdaKappaTransformer(DFSTransformer):
 class FixZeroArity(Transformer):
     """
     Workaround for missing zero arity predicates.
-    Each predicate that has zero arity will be converted to predicate of arity 1 with constant a.
+    Each predicate that has zero arity will be converted to predicate of arity 1 with constant a__.
     """
+    dummy_constant = Token('CONSTANT', 'a__')
+
     def _get_func(self, name):
         if name in ["predicate_metadata", "predicate_offset"]:
             return lambda children: Tree(name,
@@ -222,14 +227,26 @@ class FixZeroArity(Transformer):
         predicate = children[0]
         term_list = children[1]
         if len(term_list.children) == 0:
-            term_list = Tree('term_list', [Token('CONSTANT', 'a')])
+            term_list = Tree('term_list', [FixZeroArity.dummy_constant])
         return Tree('normal_atomic_formula', [predicate, term_list])
+
+    @staticmethod
+    def restore(root):
+        class RestoreZeroArity(DFSTransformer):
+            @staticmethod
+            def normal_atomic_formula(formula):
+                if len(formula["term_list"].children) == 1 and formula["term_list"][0] == FixZeroArity.dummy_constant:
+                    del formula["term_list"][0]
+                return formula
+
+        return RestoreZeroArity().transform(root)
 
 
 class ReduceFinalKappa:
     """
     Workaround to be able to resolve and end up with every predicate instead of just predicate named finalKappa.
     """
+
     @staticmethod
     def transform(root):
         output = root.children
@@ -267,6 +284,7 @@ class FixedOffsetTransformer:
     """
     Fix offset of every predicate to zero.
     """
+
     @staticmethod
     def transform(root):
         output = root.children
@@ -288,13 +306,22 @@ class ToCodeTransformer(DFSTransformer):
     """
     Convert the tree representation of code back to text.
     """
+
     def _get_func(self, name):
         if name in ["initial_weight", "metadata_value"]:
             return lambda x: x.children[0]
-        elif name in ["normal_atomic_formula", "builtin_formula"]:
+        elif name in ["normal_atomic_formula", "builtin_formula", "member_formula"]:
             return lambda root: root.children[0] + root.children[1]
         else:
             return super()._get_func(name)
+
+    @staticmethod
+    def member_term_list(root):
+        return ToCodeTransformer.term_list(root)
+
+    @staticmethod
+    def constant_list(root):
+        return ToCodeTransformer.metadata(root)
 
     @staticmethod
     def term_list(root):
@@ -388,6 +415,7 @@ def transform_result(text):
     joined_kappa_lambda = LambdaKappaTransformer.restore(tree)
     removed_offset = FixedOffsetTransformer().restore(joined_kappa_lambda)
     removed_final_kappa = ReduceFinalKappa().restore(removed_offset)
-    transformed_code = ToCodeTransformer().transform(removed_final_kappa)
+    fixed_arity = FixZeroArity().restore(removed_final_kappa)
+    transformed_code = ToCodeTransformer().transform(fixed_arity)
     logger.debug(f"Transformed code: {transformed_code}")
     return transformed_code

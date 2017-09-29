@@ -1,4 +1,4 @@
-0 score() :- card(0,2,spades),card(1,2,spades).
+0 score() :- card(0,2,spades),card(1,2,spades).
 0 score() :- card(0,2,spades),card(1,2,hearts).
 0 score() :- card(0,2,spades),card(1,2,diamonds).
 0 score() :- card(0,2,spades),card(1,2,clubs).

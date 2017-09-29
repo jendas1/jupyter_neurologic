@@ -1,3 +1,5 @@
+import logging
+
 from neurologic.template_transformer import transform
 
 
@@ -8,6 +10,10 @@ def test_special_predicate():
 def test_advanced_template_transform():
     assert transform(advanced_input_text) == advanced_result
 
+def test_scrabble_transform():
+    pass
+    #logging.basicConfig(level=logging.DEBUG)
+    #print(transform(scrabble_rules))
 
 advanced_input_text = r"""
 0.0 cardFromGroup(Group,Position) :- card(Position,Rank,Suit),
@@ -44,8 +50,8 @@ __Var3_cardFromGroup/2 [lukasiewicz]
 __Var0_straight(3) :- cardFromGroup(Group,Position1),succ(Group,3),cardFromGroup(3,Position2),@alldiff(Position1,Position2).
 0.0 straight(3) :- __Var0_straight(3).
 __Var0_straight/1 [lukasiewicz]
-__Var0_score(a) :- straight(3).
-0.0 score(a) :- __Var0_score(a).
+__Var0_score(a__) :- straight(3).
+0.0 score(a__) :- __Var0_score(a__).
 <1.0> succ(0,1).
 <1.0> succ(1,2).
 <1.0> succ(2,3).
@@ -130,4 +136,9 @@ nice/1 <0.0>
 finalKappa/1 <0.0>
 __finalwinner/2 <0.0>
 __finalnice/1 <0.0>\
+"""
+
+scrabble_rules = """
+0.0 score() :- letter(a,Position),range(List,a,z),member(Letter,List). [^Letter,identity]
+score/0 [identity]
 """

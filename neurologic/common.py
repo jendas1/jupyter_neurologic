@@ -2,12 +2,12 @@ import json
 import os
 import re
 import struct
+import subprocess
 import typing
 from collections import OrderedDict
 from glob import glob
-from typing import Union
 
-import pandas as pd
+import holoviews as hv
 
 
 def extract_parameters(filename):
@@ -27,29 +27,13 @@ def extract_parameters(filename):
 
 def extract_all_parameters(base_path, base_name):
     all_parameters = OrderedDict()
-    for name in glob(os.path.join(base_path,f"{base_name}*","learning_stats-fold*-restart*")):
+    for name in glob(os.path.join(base_path, f"{base_name}*", "learning_stats-fold*-restart*")):
         parameters = extract_parameters(name)
         for ind, params in enumerate(parameters):
             for key, value in params.items():
                 all_parameters.setdefault(key, {"values": set(), "type": "dataset" if not ind else "learning"})[
                     "values"].add(value)
     return all_parameters
-
-
-def weights_from_ser(base_path: str, fold: Union[str, int], restart: Union[str, int]) -> pd.DataFrame:
-    """
-    Load weights from .ser format.
-    :param base_path: Path to neurologic output folder
-    :param fold: Fold number
-    :param restart: Restart number
-    :return:
-    """
-    data_path = os.path.join(base_path,f"weightsHistory-fold{fold}-restart{restart}.ser")
-    headers_table = pd.read_csv(os.path.join(base_path,"weightNames.csv"))
-    data = parse(open(data_path, 'rb'))
-    df = pd.DataFrame(data[0]['data'])
-    df.columns = headers_table.columns
-    return df
 
 
 def parse(f: typing.BinaryIO):
@@ -223,7 +207,7 @@ class OldExampleFactory:
 
     def save(self, path, name="examples.pl"):
         os.makedirs(path, exist_ok=True)
-        with open(os.path.join(path,name), "w") as f:
+        with open(os.path.join(path, name), "w") as f:
             f.write(self.get_str())
 
 
@@ -243,3 +227,20 @@ class ExampleFactory:
         os.makedirs(path, exist_ok=True)
         with open(os.path.join(path, name), "w") as f:
             f.write(self.get_str())
+
+
+def _task_dimensions(output_folder):
+    settings = json.load(open(os.path.join(output_folder, "settings.json")))
+    dimensions = [hv.Dimension("Epoch", range=(0, settings["learningSteps"])),
+                  hv.Dimension("Restart", range=(0, settings["restartCount"] - 1)),
+                  hv.Dimension("Fold", range=(0, settings["folds"] - 1))]
+    return dimensions
+
+
+def _svg_from_dot(dot_file: str):
+    image_file = re.sub(".dot$", ".svg", dot_file)
+    subprocess.run(["dot", "-Tsvg", dot_file, "-o", image_file])
+    # Workaround for normal size
+    svg_data = open(image_file, "r").read()
+    svg_data = re.sub('<svg width="[0-9]+pt" height="[0-9]+pt"', '<svg width="100%" height="100%"', svg_data)
+    return svg_data

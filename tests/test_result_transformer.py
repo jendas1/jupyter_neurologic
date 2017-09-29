@@ -6,9 +6,9 @@ def test_transform_result():
 
 
 input = """\
-__Var2_score(a) :- straight(5).
-__Var1_score(a) :- straight(4).
-__Var0_score(a) :- straight(3).
+__Var2_score(a__) :- straight(5).
+__Var1_score(a__) :- straight(4).
+__Var0_score(a__) :- straight(3).
 __Var63_cardFromGroup(5,Position) :- card(Position,5,spades).
 __Var62_cardFromGroup(4,Position) :- card(Position,5,spades).
 __Var61_cardFromGroup(3,Position) :- card(Position,5,spades).
@@ -81,9 +81,9 @@ __Var0_succ(0,1) :- @true(a).
 __Var2_straight(5) :- cardFromGroup(Group,Position1),succ(Group,5),cardFromGroup(5,Position2),@alldiff(Position1,Position2).
 __Var1_straight(4) :- cardFromGroup(Group,Position1),succ(Group,4),cardFromGroup(4,Position2),@alldiff(Position1,Position2).
 __Var0_straight(3) :- cardFromGroup(Group,Position1),succ(Group,3),cardFromGroup(3,Position2),@alldiff(Position1,Position2).
-5.000000000000000 score(a) :- __Var2_score(a).
-4.000000000000000 score(a) :- __Var1_score(a).
-3.000000000000000 score(a) :- __Var0_score(a).
+5.000000000000000 score(a__) :- __Var2_score(a__).
+4.000000000000000 score(a__) :- __Var1_score(a__).
+3.000000000000000 score(a__) :- __Var0_score(a__).
 0.028214306559451 cardFromGroup(5,Position) :- __Var63_cardFromGroup(5,Position).
 -0.077682533337182 cardFromGroup(4,Position) :- __Var62_cardFromGroup(4,Position).
 -0.107587110777089 cardFromGroup(3,Position) :- __Var61_cardFromGroup(3,Position).
@@ -182,9 +182,9 @@ succ/2 0.0\
 """
 
 output = """\
-5.000000000000000 score(a) :- straight(5).
-4.000000000000000 score(a) :- straight(4).
-3.000000000000000 score(a) :- straight(3).
+5.000000000000000 score() :- straight(5).
+4.000000000000000 score() :- straight(4).
+3.000000000000000 score() :- straight(3).
 0.028214306559451 cardFromGroup(5,Position) :- card(Position,5,spades).
 -0.077682533337182 cardFromGroup(4,Position) :- card(Position,5,spades).
 -0.107587110777089 cardFromGroup(3,Position) :- card(Position,5,spades).

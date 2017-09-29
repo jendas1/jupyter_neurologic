@@ -1,4 +1,5 @@
-from neurologic import run, plot_statistics, learned_template
+from neurologic import run, learned_template
+from neurologic.statistics import plot_statistics
 import sys
 
 if __name__ == '__main__':
