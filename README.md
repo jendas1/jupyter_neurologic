@@ -1,5 +1,5 @@
 # NeuroLogic Toolbox
-NL Toolbox tries to help you to write and analyze neurologic program.
+NeuroLogic Toolbox tries to help you to write and analyze neurologic program.
 To showcase most important tools, simple tutorial in form of Jupyter notebooks was created.
 
 ## How to open jupyter notebook?
@@ -19,7 +19,8 @@ After that, just open terminal with this folder as a current directory and run:
 ```bash
 vagrant up
 ```
-Wait until start of VM and access jupyter notebook on port 9999 (exact url will be shown in terminal).
+Wait until start of VM and access jupyter notebook on via web browser on port 9999 (url will be shown in terminal).
+In that window, click on `1. Getting started with NeuroLogic programming.ipynb`. Enjoy!
 ### Conda version
 ```bash
 # core
