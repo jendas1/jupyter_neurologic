@@ -171,7 +171,7 @@ def transform_response(tree: Tree) -> Tree:
     return unfolded_specialization
 
 
-def plot_response(response_file, output_folder) -> hv.DynamicMap:
+def plot_response(response_file: str, output_folder: str) -> hv.DynamicMap:
     init(output_folder)
     tree = neurologic_parser.parse(open(response_file, 'r').read())
     transformed_tree = transform_response(tree)

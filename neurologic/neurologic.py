@@ -74,7 +74,9 @@ def run(rules_path, training_set_path, **kwargs):
 
     :param rules_path: File with rules
     :param training_set_path: File with examples
-    Keyword Arguments:
+    Optional arguments:
+    :param aggregation: Aggregation variant (defalut avg)
+    All Keyword Arguments:
         activations <ACTIVATION>                      lambda-kappa
                                                          activation functions
                                                          (default: id_id)
@@ -109,7 +111,7 @@ def run(rules_path, training_set_path, **kwargs):
                                                             k-fold
                                                             cross-validation
                                                             (default: 1)
-        grounding <GROUNDING>                         grounding variant
+        aggregation <AGGREGATION_TYPE>                 Aggregation variant
                                                             (default: avg)
         kappaAdaptiveOffset <kappaAdaptiveOffset>     Enable kappa offset
                                                             based on number of

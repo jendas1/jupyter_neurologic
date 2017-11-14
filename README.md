@@ -19,7 +19,7 @@ After that, just open terminal with this folder as a current directory and run:
 ```bash
 vagrant up
 ```
-Wait until start of VM and access jupyter notebook on via web browser on port 9999 (url will be shown in terminal).
+Wait until start of VM and access jupyter notebook on via web browser on port 9999 (exact url will be shown in terminal).
 In that window, click on `1. Getting started with NeuroLogic programming.ipynb`. Enjoy!
 ### Conda version
 ```bash
@@ -36,7 +36,7 @@ jupyter nbextension enable --sys-prefix --py widgetsnbextension
 ```
 After installation, run `jupyter notebok` that will open browser. In that window, click on `1. Getting started with NeuroLogic programming.ipynb`. Enjoy!
 ### Pip version
-Note: Java 8 or greater and Python 3.6 or greater is required.
+Note: Java 8 or greater, GrahpViz and Python 3.6 or greater is required.
 ```bash
 # core
 pip3 install .

@@ -388,6 +388,14 @@ class ToCodeTransformer(DFSTransformer):
         return "\n".join(root.children)
 
 
+def transform_specialization(text: str) -> str:
+    tree = neurologic_parser.parse(text)
+    range_transformed = RangePredicateTransformer().transform(tree)
+    unfolded_specialization = RuleSpecializationTransformer().transform(range_transformed)
+    transformed_code = ToCodeTransformer().transform(unfolded_specialization)
+    return transformed_code
+
+
 def transform(text: str) -> str:
     """
     Parse input template, run all transformation on it and return the transformed text representation of it.
