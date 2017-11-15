@@ -11,5 +11,5 @@ setup(
     author_email='',
     description='',
     install_requires=['holoviews', 'pandas', 'jupyter', 'lark-parser',
-              'ipywidgets', 'bokeh', 'matplotlib', 'pyparsing', "orderedset"]
+              'ipywidgets', 'bokeh', 'matplotlib', 'pyparsing', "orderedset", "Cython", "pyjnius"]
 )
