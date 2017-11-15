@@ -18,7 +18,7 @@ class ExampleToOldVersion(DFSTransformer):
     New Version: Rule
     `1.0 target_predicate(constant1) :- evidence_predicate(constant2),evidence_predicate(constant3).`
     Old Version: Conjunction
-    `1.0 evidence_predicate(constant2),evidence_predicate(constant3).`
+    `1.0 evidence_predicate(constant2),evidence_predicate(constant3),__finaltarget_predicate(constant1).`
     """
     @staticmethod
     def rule(root):
