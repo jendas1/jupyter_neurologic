@@ -212,6 +212,7 @@ class OldExampleFactory:
 
 
 class ExampleFactory:
+    """Helper class to handle make example generation easier"""
     def __init__(self):
         self.examples = []
         self.static_facts = []
