@@ -3,7 +3,7 @@ NeuroLogic Toolbox tries to help you to write and analyze neurologic program.
 To showcase most important tools, simple tutorial in form of Jupyter notebooks was created.
 
 ## How to open jupyter notebook?
-[Jupyter notebooks](www.jupyter.org) are interactive and rich documents with ability to contain code as well.
+[Jupyter notebooks](http://www.jupyter.org) are interactive and rich documents with ability to contain code as well.
 To open these notebooks and use all tools inside you need to install various dependencies.
 
 For the most simplest and autonomous way, go for the [vagrant version](#vagrant-version).
