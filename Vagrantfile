@@ -74,7 +74,7 @@ Vagrant.configure("2") do |config|
     wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -q -O /home/vagrant/miniconda.sh
     bash /home/vagrant/miniconda.sh -b -p /home/vagrant/miniconda3
 	echo ". /home/vagrant/miniconda3/etc/profile.d/conda.sh" >> ~/.bashrc
-    export PATH="/home/vagrant/miniconda3/bin:$PATH"
+	. /home/vagrant/miniconda3/etc/profile.d/conda.sh
     # core
     cd /vagrant
     conda env create --force --file environment_conservative.yml
@@ -87,11 +87,7 @@ Vagrant.configure("2") do |config|
     # enable displaying neural nets
     jupyter nbextension enable --sys-prefix --py widgetsnbextension
 
-  SHELL
-  $jupyter_run = <<-SCRIPT
     cd /vagrant
-	conda activate neurologic_conservative
     jupyter notebook --ip=0.0.0.0 --port=9999
-  SCRIPT
-  config.vm.provision "shell", inline: $jupyter_run, privileged: false
+  SHELL
 end

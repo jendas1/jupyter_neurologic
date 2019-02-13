@@ -13,8 +13,8 @@ dependencies:
   - graphviz
   - bokeh<1.0.0
   - matplotlib
-  - ipywidgets<=7.0.5
+  - ipywidgets
   - pyparsing
   - lark-parser
   - orderedset
-  - pyjnius<=1.1.3
+  - pyjnius
