@@ -77,8 +77,8 @@ Vagrant.configure("2") do |config|
     export PATH="/home/vagrant/miniconda3/bin:$PATH"
     # core
     cd /vagrant
-    conda env create --force --file environment.yml
-    source activate neurologic
+    conda env create --force --file environment_conservative.yml
+    conda activate neurologic_conservative
     
     # neurologic code highlighting
     jupyter nbextension install --sys-prefix neurologic_highlighter/
@@ -89,9 +89,8 @@ Vagrant.configure("2") do |config|
 
   SHELL
   $jupyter_run = <<-SCRIPT
-    export PATH="/home/vagrant/miniconda3/bin:$PATH"
     cd /vagrant
-    source activate neurologic
+	conda activate neurologic_conservative
     jupyter notebook --ip=0.0.0.0 --port=9999
   SCRIPT
   config.vm.provision "shell", inline: $jupyter_run, privileged: false

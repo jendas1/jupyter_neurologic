@@ -1,0 +1,20 @@
+name: neurologic_conservative
+channels:
+  - cyclus
+  - conda-forge
+dependencies:
+  - python>=3.6
+  - holoviews<=1.9.0
+  - pandas<=0.21.1
+  - jupyter
+  - cython
+  - pip
+  - java-jdk
+  - graphviz
+  - bokeh<1.0.0
+  - matplotlib
+  - ipywidgets<=7.0.5
+  - pyparsing
+  - lark-parser
+  - orderedset
+  - pyjnius<=1.1.3
