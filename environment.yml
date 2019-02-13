@@ -1,20 +1,20 @@
 name: neurologic
 channels:
   - cyclus
+  - conda-forge
 dependencies:
   - python>=3.6
   - holoviews
   - pandas
   - jupyter
+  - cython
   - pip
   - java-jdk
   - graphviz
-  - pip:
-    - lark-parser
-    - ipywidgets
-    - bokeh
-    - pyparsing
-    - matplotlib
-    - orderedset
-    - Cython
-    - pyjnius
+  - bokeh
+  - matplotlib
+  - ipywidgets
+  - pyparsing
+  - lark-parser
+  - orderedset
+  - pyjnius

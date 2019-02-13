@@ -73,7 +73,7 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", privileged: false, inline: <<-SHELL
     wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -q -O /home/vagrant/miniconda.sh
     bash /home/vagrant/miniconda.sh -b -p /home/vagrant/miniconda3
-    echo 'export PATH="/home/vagrant/miniconda3/bin:$PATH"' >> ~/.bashrc
+	echo ". /home/vagrant/miniconda3/etc/profile.d/conda.sh" >> ~/.bashrc
     export PATH="/home/vagrant/miniconda3/bin:$PATH"
     # core
     cd /vagrant
