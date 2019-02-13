@@ -31,10 +31,10 @@ class DFSTransformer:
         transformed_children = []
         for child in root.children:
             transformed_children.append(self.transform(child))
-        f = self._get_func(root.data)
+        f = self._call_userfunc(root.data)
         return f(Tree(root.data, transformed_children))
 
-    def _get_func(self, name):
+    def _call_userfunc(self, name, new_children=None):
         if hasattr(self, name):
             f = getattr(self, name)
         elif name in name_to_group_name and hasattr(self, name_to_group_name[name]):
@@ -208,24 +208,24 @@ class LambdaKappaTransformer(DFSTransformer):
         return root
 
 
-class FixZeroArity(Transformer):
+class FixZeroArity(DFSTransformer):
     """
     Workaround for missing zero arity predicates.
     Each predicate that has zero arity will be converted to predicate of arity 1 with constant a__.
     """
     dummy_constant = Token('CONSTANT', 'a__')
 
-    def _get_func(self, name):
-        if name in ["predicate_metadata", "predicate_offset"]:
-            return lambda children: Tree(name,
+    def _call_userfunc(self, root, new_children=None):
+        if root in ["predicate_metadata", "predicate_offset"]:
+            return lambda children: Tree(root,
                                          [children[0], Token("INT", str(max(int(children[1].value), 1))), children[2]])
         else:
-            return super()._get_func(name)
+            return super()._call_userfunc(root, new_children)
 
     @staticmethod
-    def normal_atomic_formula(children):
-        predicate = children[0]
-        term_list = children[1]
+    def normal_atomic_formula(formula):
+        predicate = formula.children[0]
+        term_list = formula.children[1]
         if len(term_list.children) == 0:
             term_list = Tree('term_list', [FixZeroArity.dummy_constant])
         return Tree('normal_atomic_formula', [predicate, term_list])
@@ -307,13 +307,13 @@ class ToCodeTransformer(DFSTransformer):
     Convert the tree representation of code back to text.
     """
 
-    def _get_func(self, name):
+    def _call_userfunc(self, name, new_children=None):
         if name in ["initial_weight", "metadata_value"]:
             return lambda x: x.children[0]
         elif name in ["normal_atomic_formula", "builtin_formula", "member_formula"]:
             return lambda root: root.children[0] + root.children[1]
         else:
-            return super()._get_func(name)
+            return super()._call_userfunc(name, new_children)
 
     @staticmethod
     def member_term_list(root):
